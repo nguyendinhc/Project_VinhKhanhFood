@@ -18,7 +18,7 @@ public partial class MainPage : ContentPage
     private IDispatcherTimer? _gpsTimer;
     private bool _isCheckingProximity;
     private bool _isSpeaking;
-    private Microsoft.Maui.Controls.Maps.Pin? _currentLocationPin;
+    private Microsoft.Maui.Controls.Maps.Circle? _userLocationCircle;
     private bool _hasCenteredUserLocation;
     private const double TriggerDistanceMeters = 50;
     private const double ResetDistanceMeters = 80;
@@ -68,36 +68,6 @@ public partial class MainPage : ContentPage
             var data = await _apiService.GetPoisAsync();
             if (data != null && data.Any())
             {
-                // 1. Lấy vị trí hiện tại của bạn
-                var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5));
-                var userLocation = await Geolocation.Default.GetLocationAsync(request);
-
-                if (userLocation != null)
-                {
-                    // 2. Chỉ LỌC ra những quán cách chỗ bạn dưới 1km (1000 mét)
-                    var nearbyPois = data.Where(poi =>
-                    {
-                        double distanceInKm = Location.CalculateDistance(
-                            userLocation.Latitude, userLocation.Longitude,
-                            poi.Latitude, poi.Longitude, DistanceUnits.Kilometers);
-
-                        return distanceInKm <= 100.0; // <= 1.0 nghĩa là bán kính 1km
-                    }).ToList();
-
-                    // 3. Đổ danh sách đã lọc lên màn hình
-                    lstPois.ItemsSource = nearbyPois;
-
-                    // Cập nhật dòng chữ thông báo trên UI
-                    lblCurrentLocation.Text = $"Tìm thấy {nearbyPois.Count} quán ở gần bạn!";
-                }
-                else
-                {
-                    // Nếu không lấy được GPS thì đành hiện tất cả
-                    lstPois.ItemsSource = data;
-                }
-            }
-                if (data != null && data.Any())
-            {
                 foreach (var item in data)
                 {
                     item.Introduction = item.Poilocalizations?.FirstOrDefault()?.Description
@@ -127,8 +97,18 @@ public partial class MainPage : ContentPage
                     myMap.Pins.Add(pin);
                 }
 
-                var centerLocation = new Location(10.7600, 106.7050);
-                myMap.MoveToRegion(MapSpan.FromCenterAndRadius(centerLocation, Distance.FromKilometers(0.5)));
+                var request = new GeolocationRequest(GeolocationAccuracy.High, TimeSpan.FromSeconds(8));
+                var userLocation = await Geolocation.Default.GetLocationAsync(request);
+                if (userLocation != null)
+                {
+                    UpdateUserLocationOnMap(userLocation);
+                }
+                else
+                {
+                    var centerLocation = new Location(10.7600, 106.7050);
+                    myMap.MoveToRegion(MapSpan.FromCenterAndRadius(centerLocation, Distance.FromKilometers(0.5)));
+                }
+
                 StartGpsTimer();
             }
             else
@@ -284,20 +264,21 @@ public partial class MainPage : ContentPage
         {
             lblCurrentLocation.Text = $"Vị trí hiện tại: {location.Latitude:F6}, {location.Longitude:F6}";
 
-            if (_currentLocationPin == null)
+            if (_userLocationCircle == null)
             {
-                _currentLocationPin = new Microsoft.Maui.Controls.Maps.Pin
+                _userLocationCircle = new Microsoft.Maui.Controls.Maps.Circle
                 {
-                    Label = "Bạn đang ở đây",
-                    Location = location,
-                    Type = Microsoft.Maui.Controls.Maps.PinType.SavedPin,
-                    Address = "Vị trí hiện tại"
+                    Center = location,
+                    Radius = new Distance(12),
+                    FillColor = Color.FromRgba(30, 144, 255, 90),
+                    StrokeColor = Colors.DodgerBlue,
+                    StrokeWidth = 2
                 };
-                myMap.Pins.Add(_currentLocationPin);
+                myMap.MapElements.Add(_userLocationCircle);
             }
             else
             {
-                _currentLocationPin.Location = location;
+                _userLocationCircle.Center = location;
             }
 
             if (!_hasCenteredUserLocation)

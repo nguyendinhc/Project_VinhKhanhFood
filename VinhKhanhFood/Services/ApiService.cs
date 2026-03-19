@@ -10,7 +10,7 @@ namespace VinhKhanhFood.Services
     {
         // QUAN TRỌNG: Thay IP của máy tính bạn vào đây (Ví dụ: 192.168.1.5)
         // Số 7044 là Port của Web API (xem lại trên trình duyệt khi chạy API)
-        private const string BaseUrl = "http://192.168.1.239:5100/api/";
+        private const string BaseUrl = "http://192.168.1.250:5100/api/";
         private readonly HttpClient _httpClient;
 
         public ApiService()
