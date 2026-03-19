@@ -238,8 +238,21 @@ public partial class MainPage : ContentPage
                 _isSpeaking = true;
                 try
                 {
-                    string speechText = $"Bạn đang ở gần {nearestPoi.Name}. {nearestPoi.Introduction}";
-                    await TextToSpeech.Default.SpeakAsync(speechText);
+                    string currentLangCode = Preferences.Default.Get("AppLanguage", "vi");
+
+                    string localizedDesc = nearestPoi.Poilocalizations?
+                        .FirstOrDefault(x => x.LanguageCode.ToLower() == currentLangCode)?
+                        .Description;
+
+                    string speechText = localizedDesc ?? $"Bạn đang ở gần {nearestPoi.Name}. {nearestPoi.Introduction}";
+
+                    var locales = await TextToSpeech.Default.GetLocalesAsync();
+                    var selectedLocale = locales.FirstOrDefault(l => l.Language.ToLower().Contains(currentLangCode));
+
+                    await TextToSpeech.Default.SpeakAsync(speechText, new SpeechOptions
+                    {
+                        Locale = selectedLocale
+                    });
                 }
                 finally
                 {
@@ -249,7 +262,6 @@ public partial class MainPage : ContentPage
         }
         catch (Exception ex)
         {
-            // Xử lý nếu người dùng tắt GPS hoặc lỗi quyền truy cập
             System.Diagnostics.Debug.WriteLine($"Lỗi GPS: {ex.Message}");
         }
         finally
@@ -257,6 +269,7 @@ public partial class MainPage : ContentPage
             _isCheckingProximity = false;
         }
     }
+
 
     private void UpdateUserLocationOnMap(Location location)
     {
