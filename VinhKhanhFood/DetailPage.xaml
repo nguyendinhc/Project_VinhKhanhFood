@@ -38,6 +38,19 @@
                                     CornerRadius="12" />
                         </Grid>
 
+                        <Button x:Name="btnFavorite"
+                                Text="🤍 Thêm vào Yêu thích"
+                                BackgroundColor="Transparent"
+                                TextColor="#FF5722"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                BorderColor="#FF5722"
+                                BorderWidth="1"
+                                CornerRadius="12"
+                                HeightRequest="45"
+                                Margin="0, 10, 0, 0"
+                                Clicked="OnFavoriteClicked" />
+
                     </VerticalStackLayout>
                 </Frame>
 

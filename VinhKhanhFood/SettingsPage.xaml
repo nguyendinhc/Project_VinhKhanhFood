@@ -2,9 +2,46 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="VinhKhanhFood.SettingsPage"
-             Title="Cài đặt">
-    <VerticalStackLayout Padding="20" Spacing="15">
-        <Label Text="⚙️ CÀI ĐẶT ỨNG DỤNG" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#FF5722" />
-        <Label Text="Tính năng đang được phát triển..." FontSize="16" HorizontalOptions="Center" />
-    </VerticalStackLayout>
+             Title="Cài Đặt"
+             BackgroundColor="#F5F7F8">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <Label Text="Tùy chỉnh ứng dụng" FontSize="22" FontAttributes="Bold" TextColor="#FF5722" />
+
+            <Frame CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🌍 Ngôn ngữ thuyết minh" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                    <Label Text="Chọn ngôn ngữ để máy đọc giới thiệu quán" FontSize="12" TextColor="Gray" />
+
+                    <Picker x:Name="pckLanguage" Title="Chọn ngôn ngữ thuyết minh" SelectedIndexChanged="OnLanguageChanged" TextColor="Black">
+                        <Picker.ItemsSource>
+                            <x:Array Type="{x:Type x:String}">
+                                <x:String>🇻🇳 Tiếng Việt</x:String>
+                                <x:String>🇬🇧 English</x:String>
+                                <x:String>🇰🇷 한국어 (Tiếng Hàn)</x:String>
+                                <x:String>🇨🇳 中文 (Tiếng Trung)</x:String>
+                                <x:String>🇯🇵 日本語 (Tiếng Nhật)</x:String>
+                            </x:Array>
+                        </Picker.ItemsSource>
+                    </Picker>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <Grid ColumnDefinitions="*, Auto">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="📍 Tự động thuyết minh (GPS)" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                        <Label Text="Tự phát loa khi đến gần quán (50m)" FontSize="12" TextColor="Gray" />
+                    </VerticalStackLayout>
+
+                    <Switch x:Name="swAutoPlay" Grid.Column="1" Toggled="OnAutoPlayToggled" ThumbColor="#FF5722" OnColor="#FFCCBC" />
+                </Grid>
+            </Frame>
+
+            <Button Text="Lưu Cài Đặt" BackgroundColor="#FF5722" TextColor="White" FontAttributes="Bold" CornerRadius="25" HeightRequest="50" Margin="0,20,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
