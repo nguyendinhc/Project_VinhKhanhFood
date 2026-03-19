@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VinhKhanhFood.DetailPage"
+             Title="Chi tiết địa điểm">
+
+    <ScrollView>
+        <VerticalStackLayout>
+
+            <Image Source="{Binding ImageUrl}" 
+                   HeightRequest="300" 
+                   Aspect="AspectFill" />
+
+            <VerticalStackLayout Padding="20" Spacing="15" Margin="0,-40,0,0">
+                <Frame CornerRadius="25" HasShadow="True" BorderColor="Transparent" Padding="20" BackgroundColor="White">
+                    <VerticalStackLayout Spacing="10">
+
+                        <Label Text="{Binding Name}" FontSize="24" FontAttributes="Bold" TextColor="#333333" />
+                        <Label Text="{Binding Status}" TextColor="Green" FontSize="14" FontAttributes="Italic" />
+
+                        <BoxView HeightRequest="1" Color="LightGray" Margin="0,10" />
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <Button Grid.Column="0" 
+                                    Text="🔊 Thuyết minh" 
+                                    Clicked="OnSpeakClicked" 
+                                    BackgroundColor="#FF7F50" 
+                                    TextColor="White" 
+                                    FontAttributes="Bold"
+                                    CornerRadius="12" />
+
+                            <Button Grid.Column="1" 
+                                    Text="📍 Chỉ đường" 
+                                    Clicked="OnNavigateClicked" 
+                                    BackgroundColor="#20B2AA" 
+                                    TextColor="White" 
+                                    FontAttributes="Bold"
+                                    CornerRadius="12" />
+                        </Grid>
+
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Label Text="Giới thiệu" FontSize="20" FontAttributes="Bold" Margin="0,10,0,0" TextColor="#1E90FF" />
+                <Label Text="{Binding Introduction}" FontSize="16" LineHeight="1.5" TextColor="#555555" />
+
+                <Label Text="Thông tin thêm" FontSize="20" FontAttributes="Bold" Margin="0,15,0,0" TextColor="#1E90FF" />
+                <Label Text="{Binding Description}" FontSize="16" LineHeight="1.5" TextColor="#555555" />
+
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VinhKhanhFood.SettingsPage"
+             Title="Cài đặt">
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <Label Text="⚙️ CÀI ĐẶT ỨNG DỤNG" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#FF5722" />
+        <Label Text="Tính năng đang được phát triển..." FontSize="16" HorizontalOptions="Center" />
+    </VerticalStackLayout>
+</ContentPage>
