@@ -1,0 +1,151 @@
+﻿@inherits LayoutComponentBase
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@using VinhKhanhWebAdmin.Services
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 shadow-sm bg-white d-flex justify-content-end align-items-center">
+            <AuthorizeView>
+                <Authorized>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="user-chip">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span>@(string.IsNullOrWhiteSpace(displayName) ? context.User.Identity?.Name : displayName)</span>
+                        </div>
+                        <button class="btn btn-logout-modern" @onclick="OpenLogoutConfirm">
+                            <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                        </button>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Phiên đăng nhập không hợp lệ</span>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@if (showLogoutConfirm)
+{
+    <div class="logout-confirm-backdrop" @onclick="CloseLogoutConfirm"></div>
+    <div class="logout-confirm-modal shadow">
+        <h5 class="mb-2">Xác nhận đăng xuất</h5>
+        <p class="text-muted mb-3">Bạn có chắc chắn muốn đăng xuất không?</p>
+        <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-light" @onclick="CloseLogoutConfirm">Hủy</button>
+            <button class="btn btn-logout-modern" @onclick="HandleLogout">Đăng xuất</button>
+        </div>
+    </div>
+}
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+<style>
+    .user-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+        font-weight: 700;
+    }
+
+    .btn-logout-modern {
+        border: none;
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.22);
+        transition: all 0.2s ease;
+    }
+
+        .btn-logout-modern:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 22px rgba(239, 68, 68, 0.3);
+            color: #fff;
+        }
+
+    .logout-confirm-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.28);
+        z-index: 1090;
+    }
+
+    .logout-confirm-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1091;
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px;
+        width: min(92vw, 420px);
+    }
+</style>
+
+@code {
+    private string displayName = "";
+    private bool showLogoutConfirm;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        displayName = await LocalStorage.GetItemAsStringAsync("displayName");
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName = await JS.InvokeAsync<string>("sessionStorage.getItem", "displayName");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleLogout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+        await LocalStorage.RemoveItemAsync("userRole"); // Vứt luôn cái quyền (nếu có lưu)
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "userRole");
+        await LocalStorage.RemoveItemAsync("displayName");
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "displayName");
+
+        // 2. Báo cáo cho Máy quét thẻ biết là: "Khách vừa trả thẻ rồi nha!"
+        ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsLoggedOut();
+
+        // 3. Đá văng ra ngoài cổng (Trang Đăng nhập)
+        Navigation.NavigateTo("/");
+    }
+
+    private void OpenLogoutConfirm()
+    {
+        showLogoutConfirm = true;
+    }
+
+    private void CloseLogoutConfirm()
+    {
+        showLogoutConfirm = false;
+    }
+}

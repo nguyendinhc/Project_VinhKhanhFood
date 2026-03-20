@@ -1,0 +1,236 @@
+﻿@page "/"
+@layout Layout.EmptyLayout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header text-center">
+            <div class="logo-circle">
+                <i class="bi bi-shop"></i>
+            </div>
+            <h2>VĨNH KHÁNH FOOD</h2>
+            <p>Hệ thống Quản trị & AI Advisor</p>
+        </div>
+
+        <form>
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">TÀI KHOẢN</label>
+                <input type="text" class="form-control custom-input" placeholder="Nhập tên đăng nhập" @bind="loginModel.Username" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">MẬT KHẨU</label>
+                <input type="password" class="form-control custom-input" placeholder="••••••••" @bind="loginModel.Password" />
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rememberMe" @bind="rememberMe">
+                    <label class="form-check-label text-muted small" for="rememberMe">
+                        Ghi nhớ tôi
+                    </label>
+                </div>
+                <a href="#" class="text-decoration-none small text-primary fw-semibold">Quên mật khẩu?</a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger py-2 text-center small fw-bold custom-alert">
+                    @errorMessage
+                </div>
+            }
+
+            <div class="d-grid mt-4">
+                <button type="button" class="btn btn-primary btn-login" @onclick="HandleLogin" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>ĐANG XỬ LÝ...</span>
+                    }
+                    else
+                    {
+                        <span>ĐĂNG NHẬP</span>
+                    }
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Nền xanh đen quyền lực, chuyên nghiệp */
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Thẻ trắng tinh khiết, bo góc nhẹ nhàng */
+    .login-card {
+        background: #ffffff;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 420px;
+        padding: 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Logo tròn phía trên */
+    .logo-circle {
+        width: 60px;
+        height: 60px;
+        background: #eff6ff;
+        color: #2563eb;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin: 0 auto 15px auto;
+    }
+
+    .login-header h2 {
+        color: #0f172a;
+        font-weight: 800;
+        font-size: 24px;
+        letter-spacing: -0.5px;
+        margin-bottom: 5px;
+    }
+
+    .login-header p {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+
+    /* Input gọn gàng, viền tinh tế */
+    .custom-input {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 12px 15px;
+        border-radius: 8px;
+        color: #334155;
+        font-size: 15px;
+        transition: all 0.2s;
+    }
+
+        .custom-input:focus {
+            background: #ffffff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+
+    /* Nút bấm hiệu ứng mượt mà */
+    .btn-login {
+        background: #2563eb;
+        border: none;
+        border-radius: 8px;
+        padding: 14px;
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+    }
+
+        .btn-login:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        }
+
+    .custom-alert {
+        border: none;
+        background: #fef2f2;
+        color: #ef4444;
+        border-radius: 8px;
+    }
+
+    /* Hiệu ứng trượt lên khi mở trang */
+    @@keyframes slideUp {
+        0% {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+@code {
+    private LoginRequest loginModel = new LoginRequest();
+    private string errorMessage = "";
+    private bool isLoading = false;
+    private bool rememberMe = false; 
+    private async Task HandleLogin()
+    {
+        errorMessage = "";
+        isLoading = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/Auth/login", loginModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                var displayName = string.IsNullOrWhiteSpace(result?.FullName)
+                    ? loginModel.Username
+                    : result.FullName;
+
+                if (rememberMe)
+                {
+                    await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+                    await JS.InvokeVoidAsync("sessionStorage.removeItem", "userRole");
+                    await JS.InvokeVoidAsync("sessionStorage.removeItem", "displayName");
+
+                    await LocalStorage.SetItemAsStringAsync("authToken", result.Token);
+                    await LocalStorage.SetItemAsStringAsync("userRole", result.Role);
+                    await LocalStorage.SetItemAsStringAsync("displayName", displayName);
+                }
+                else
+                {
+                    await LocalStorage.RemoveItemAsync("authToken");
+                    await LocalStorage.RemoveItemAsync("userRole");
+                    await LocalStorage.RemoveItemAsync("displayName");
+
+                    await JS.InvokeVoidAsync("sessionStorage.setItem", "authToken", result.Token);
+                    await JS.InvokeVoidAsync("sessionStorage.setItem", "userRole", result.Role);
+                    await JS.InvokeVoidAsync("sessionStorage.setItem", "displayName", displayName);
+                }
+                ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(result.Token);
+                // 2. Chuyển hướng sang trang quản trị
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorMessage = "Sai tài khoản hoặc mật khẩu!";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Không kết nối được API Server. Vui lòng kiểm tra API đã chạy đúng cổng chưa.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Có lỗi xảy ra khi đăng nhập.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class LoginRequest { public string Username { get; set; } public string Password { get; set; } }
+    public class LoginResponse { public string Token { get; set; } public string Role { get; set; } public string FullName { get; set; } }
+}
