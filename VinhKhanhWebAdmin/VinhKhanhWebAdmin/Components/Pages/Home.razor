@@ -1,0 +1,299 @@
+﻿@page "/home"
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+
+<PageTitle>Tổng quan hệ thống - VinhKhanhAdmin</PageTitle>
+
+<div class="container-fluid p-0">
+    @if (showWelcomePopup)
+    {
+        <div class="login-success-backdrop" @onclick="CloseWelcomePopup"></div>
+        <div class="login-success-popup alert alert-success shadow border-0">
+            <button type="button" class="btn-close float-end" @onclick="CloseWelcomePopup"></button>
+            <h4 class="mb-2 fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Đăng nhập thành công!</h4>
+            <span class="fs-5">Xin chào <b class="text-uppercase">@displayName</b></span>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark m-0">@GetTimeGreeting(), <span class="text-primary">@displayName</span>! 👋</h2>
+            <p class="text-muted m-0">Đây là tổng quan tình hình hệ thống hôm nay.</p>
+        </div>
+        <div>
+            <button class="btn btn-white border shadow-sm rounded-pill px-3">
+                <i class="bi bi-calendar-event me-2 text-secondary"></i> @DateTime.Now.ToString("dd/MM/yyyy")
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="icon-box bg-primary-subtle text-primary rounded-circle me-4">
+                        <i class="bi bi-shop-window fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1 fw-semibold">Tổng Địa Điểm</h6>
+                        <h2 class="fw-bold mb-0">156</h2>
+                        <small class="text-success fw-bold"><i class="bi bi-arrow-up-short"></i> +12 tuần này</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 card-hover bg-warning-subtle">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="icon-box bg-warning text-white rounded-circle me-4">
+                        <i class="bi bi-person-lines-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-dark-emphasis mb-1 fw-semibold">Chờ Phê Duyệt</h6>
+                        <h2 class="fw-bold mb-0 text-dark-emphasis">5</h2>
+                        <small class="text-dark-emphasis">Cần xử lý ngay</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="icon-box bg-success-subtle text-success rounded-circle me-4">
+                        <i class="bi bi-people-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1 fw-semibold">Tổng Users</h6>
+                        <h2 class="fw-bold mb-0">2,450</h2>
+                        <small class="text-success fw-bold"><i class="bi bi-arrow-up-short"></i> +5% tháng qua</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="icon-box bg-info-subtle text-info rounded-circle me-4">
+                        <i class="bi bi-cpu-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1 fw-semibold">Yêu cầu AI hôm nay</h6>
+                        <h2 class="fw-bold mb-0">89</h2>
+                        <small class="text-muted">Gemini 2.0 Flash</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 py-3 rounded-top-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-primary"></i>Hoạt động gần đây</h5>
+                    <a href="/dashboard" class="btn btn-sm btn-light rounded-pill px-3">Xem tất cả</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Đối tượng</th>
+                                <th>Hành động</th>
+                                <th>Người thực hiện</th>
+                                <th>Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">Ốc Oanh</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Thêm mới</span></td>
+                                <td>Admin Cường</td>
+                                <td class="text-muted small">10 phút trước</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">Chủ quán: Nguyễn Văn A</td>
+                                <td><span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Đăng ký mới</span></td>
+                                <td>Hệ thống</td>
+                                <td class="text-muted small">35 phút trước</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">Ốc Vũ</td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Xóa bỏ</span></td>
+                                <td>Admin Cường</td>
+                                <td class="text-muted small">1 giờ trước</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">Menu Quán Lạ</td>
+                                <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Cập nhật AI</span></td>
+                                <td>Owner (ID: 55)</td>
+                                <td class="text-muted small">2 giờ trước</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary text-white" style="background: linear-gradient(45deg, #0d6efd, #0a58ca);">
+                <div class="card-body p-5 text-center d-flex flex-column justify-content-center align-items-center">
+                    <i class="bi bi-rocket-takeoff-fill display-3 mb-4"></i>
+                    <h4 class="fw-bold">Hệ thống đang hoạt động tốt!</h4>
+                    <p class="opacity-75">Tất cả các dịch vụ API và AI Advisor đang vận hành ổn định.</p>
+                    <button class="btn btn-light text-primary rounded-pill px-4 mt-3 fw-bold shadow-sm">Kiểm tra trạng thái</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* CSS riêng cho trang Home để làm đẹp các thẻ */
+    .icon-box {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0; /* Không bị bóp méo */
+    }
+
+    .card-hover {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+        .card-hover:hover {
+            transform: translateY(-5px); /* Bay lên nhẹ khi rê chuột */
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+
+    .bg-primary-subtle {
+        background-color: #cfe2ff !important;
+    }
+
+    .bg-success-subtle {
+        background-color: #d1e7dd !important;
+    }
+
+    .bg-warning-subtle {
+        background-color: #fff3cd !important;
+    }
+
+    .bg-info-subtle {
+        background-color: #cff4fc !important;
+    }
+
+    .login-success-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.22);
+        backdrop-filter: blur(2px);
+        z-index: 1050;
+        animation: fadeInBackdrop 0.25s ease-out;
+    }
+
+    .login-success-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1061;
+        min-width: 520px;
+        max-width: 640px;
+        width: 52vw;
+        padding: 1.25rem 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
+        background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+        animation: popupIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @@keyframes popupIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -46%) scale(0.96);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+
+    @@keyframes fadeInBackdrop {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .login-success-popup {
+            min-width: 0;
+            width: calc(100vw - 32px);
+        }
+    }
+</style>
+
+@code {
+    private string displayName = "Admin";
+    private bool showWelcomePopup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Lấy tên người dùng từ LocalStorage để chào hỏi
+        var name = await LocalStorage.GetItemAsStringAsync("displayName");
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            displayName = name;
+        }
+        else
+        {
+            // Fallback nếu chưa có tên
+            var state = await JS.InvokeAsync<string>("sessionStorage.getItem", "displayName");
+            if (!string.IsNullOrWhiteSpace(state)) displayName = state;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var shouldShowPopup = await JS.InvokeAsync<string>("sessionStorage.getItem", "showLoginSuccessPopup");
+        if (!string.Equals(shouldShowPopup, "1", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        showWelcomePopup = true;
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "showLoginSuccessPopup");
+        StateHasChanged();
+
+        await Task.Delay(3000);
+        showWelcomePopup = false;
+        StateHasChanged();
+    }
+
+    private void CloseWelcomePopup()
+    {
+        showWelcomePopup = false;
+    }
+
+    // Hàm tạo lời chào theo giờ
+    private string GetTimeGreeting()
+    {
+        var hour = DateTime.Now.Hour;
+        if (hour < 12) return "Chào buổi sáng";
+        if (hour < 18) return "Chào buổi chiều";
+        return "Chào buổi tối";
+    }
+}

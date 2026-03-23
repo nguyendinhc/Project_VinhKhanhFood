@@ -209,8 +209,9 @@
                     await JS.InvokeVoidAsync("sessionStorage.setItem", "displayName", displayName);
                 }
                 ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(result.Token);
-                // 2. Chuyển hướng sang trang quản trị
-                Navigation.NavigateTo("/dashboard");
+                await JS.InvokeVoidAsync("sessionStorage.setItem", "showLoginSuccessPopup", "1");
+                // 2. Chuyển hướng sang trang chủ quản trị
+                Navigation.NavigateTo("/home");
             }
             else
             {

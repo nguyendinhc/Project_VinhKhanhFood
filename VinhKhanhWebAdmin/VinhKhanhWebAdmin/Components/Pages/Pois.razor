@@ -1,0 +1,314 @@
+﻿@page "/pois"
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@using System.Net.Http.Headers
+
+<PageTitle>Quản lý Vĩnh Khánh</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="m-0 text-primary fw-bold">Danh sách Địa Điểm</h2>
+            <button class="btn btn-primary px-4 rounded-pill shadow-sm" @onclick="MởFormThêmMới">
+                <i class="bi bi-plus-circle me-1"></i> Thêm quán mới
+            </button>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Đang tải dữ liệu từ API...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+        else
+        {
+            <div class="table-responsive shadow-sm rounded border-0">
+                <table class="table table-hover align-middle bg-white m-0 w-100">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th width="5%">ID</th>
+                            <th width="10%">Ảnh</th>
+                            <th width="25%" class="text-start">Tên Quán</th>
+                            <th width="20%">Tọa độ & Bán kính</th>
+                            <th width="12%">Trạng thái</th>
+                            <th width="13%">Ngày tạo</th>
+                            <th width="15%">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        @foreach (var quan in danhSachQuan)
+                        {
+                            <tr>
+                                <td><span class="text-muted small">#@quan.Poiid</span></td>
+                                <td>
+                                    <img src="@(string.IsNullOrEmpty(quan.Thumbnail) ? "img/no-image.png" : quan.Thumbnail)"
+                                         class="rounded shadow-sm" style="width: 50px; height: 50px; object-fit: cover;" />
+                                </td>
+                                <td class="text-start">
+                                    <div class="fw-bold text-primary">@quan.Name</div>
+                                    <small class="text-muted">ID: @quan.Poiid</small>
+                                </td>
+                                <td>
+                                    <div class="small fw-bold text-dark">@quan.Latitude, @quan.Longitude</div>
+                                    <div class="badge bg-info-subtle text-info border border-info-subtle">R: @(quan.Radius ?? 0)m</div>
+                                </td>
+                                <td>
+                                    @if (IsActiveStatus(quan.Status))
+                                    {
+                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Hoạt động</span>
+                                    }
+                                    else if (string.Equals(quan.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Chờ duyệt</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">Tạm ẩn</span>
+                                    }
+                                </td>
+                                <td><span class="small text-muted">@quan.CreatedAt?.ToString("dd/MM/yyyy")</span></td>
+                                <td>
+                                    <button class="btn btn-light btn-sm rounded-3 border me-1" @onclick="() => MởFormSửa(quan)"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-light btn-sm rounded-3 border text-danger" @onclick="() => HandleDeletePoi(quan)"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (hienThiFormThem)
+        {
+            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-primary text-white rounded-top-4 border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-plus-square-dotted me-2"></i>@(isEditMode ? "Cập Nhật Địa Điểm" : "Thêm Địa Điểm Mới")</h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="ĐóngFormThêmMới"></button>
+                        </div>
+                        <div class="modal-body p-4 bg-light">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-dark">Tên quán ốc</label>
+                                    <input type="text" class="form-control form-control-lg shadow-sm border-0" @bind="newPoi.Name" placeholder="VD: Ốc Oanh Vĩnh Khánh">
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-dark">Link ảnh đại diện (Thumbnail URL)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text border-0 bg-white"><i class="bi bi-image"></i></span>
+                                        <input type="text" class="form-control shadow-sm border-0" @bind="newPoi.Thumbnail" placeholder="https://example.com/hinh-anh.jpg">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark">Vĩ độ (Lat)</label>
+                                    <input type="number" step="any" class="form-control shadow-sm border-0" @bind="newPoi.Latitude" placeholder="10.76xxx">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark">Kinh độ (Long)</label>
+                                    <input type="number" step="any" class="form-control shadow-sm border-0" @bind="newPoi.Longitude" placeholder="106.7xxx">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark">Bán kính (m)</label>
+                                    <input type="number" class="form-control shadow-sm border-0" @bind="newPoi.Radius" placeholder="VD: 50">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Trạng thái hiển thị</label>
+                                    <select class="form-select shadow-sm border-0" @bind="newPoi.Status">
+                                        <option value="Active">Hoạt động (Active)</option>
+                                        <option value="Inactive">Tạm ẩn (Inactive)</option>
+                                        <option value="Pending">Chờ duyệt (Pending)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
+                            <button type="button" class="btn btn-outline-secondary px-4 rounded-pill" @onclick="ĐóngFormThêmMới">Hủy bỏ</button>
+                            <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" @onclick="HandleSavePoi">
+                                <i class="bi bi-cloud-arrow-up me-1"></i> @(isEditMode ? "Cập nhật" : "Lưu vào Hệ thống")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="alert alert-danger mt-5 shadow-sm border-0 text-center">
+            <h3 class="alert-heading"><i class="bi bi-shield-x" style="font-size: 3rem;"></i></h3>
+            <h4>CẢNH BÁO AN NINH</h4>
+            <p>Phiên đăng nhập đã hết hạn</p>
+            <a href="/" class="btn btn-danger mt-3 px-4 rounded-pill">Quay về Đăng nhập</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Poi> danhSachQuan = new();
+    private string errorMessage = "";
+    private bool isLoading = true;
+    private bool hienThiFormThem = false;
+    private bool isEditMode = false;
+
+    // 1. KHAI BÁO BIẾN ĐỂ HỨNG DỮ LIỆU TỪ FORM THÊM MỚI
+    private Poi newPoi = new Poi { Status = "Active", Radius = 50 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            danhSachQuan = await Http.GetFromJsonAsync<List<Poi>>("api/Pois") ?? new List<Poi>();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await LocalStorage.RemoveItemAsync("authToken");
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Không kết nối được API: {ex.Message}";
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            errorMessage = $"Dữ liệu API không đúng định dạng: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi xử lý dữ liệu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void MởFormThêmMới()
+    {
+        // Reset lại dữ liệu mặc định khi mở form
+        newPoi = new Poi { Status = "Active", Radius = 50, CreatedAt = DateTime.Now };
+        isEditMode = false;
+        hienThiFormThem = true;
+    }
+
+    private void MởFormSửa(Poi poi)
+    {
+        newPoi = new Poi
+        {
+            Poiid = poi.Poiid,
+            Name = poi.Name,
+            Latitude = poi.Latitude,
+            Longitude = poi.Longitude,
+            Radius = poi.Radius,
+            Thumbnail = poi.Thumbnail,
+            Status = poi.Status,
+            CreatedAt = poi.CreatedAt
+        };
+
+        isEditMode = true;
+        hienThiFormThem = true;
+    }
+
+    private void ĐóngFormThêmMới()
+    {
+        hienThiFormThem = false;
+        isEditMode = false;
+    }
+
+    // 2. HÀM XỬ LÝ LƯU/CẬP NHẬT DỮ LIỆU
+    private async Task HandleSavePoi()
+    {
+        if (string.IsNullOrWhiteSpace(newPoi.Name))
+        {
+            await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", "Vui lòng nhập tên quán!");
+            return;
+        }
+
+        try
+        {
+            var response = isEditMode
+                ? await Http.PutAsJsonAsync($"api/Pois/{newPoi.Poiid}", newPoi)
+                : await Http.PostAsJsonAsync("api/Pois", newPoi);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("showSuccessMessage", "Thành công!", isEditMode ? $"Đã cập nhật {newPoi.Name}." : $"Đã thêm {newPoi.Name} vào hệ thống.");
+                hienThiFormThem = false;
+                isEditMode = false;
+                await LoadData(); // Tải lại bảng để thấy quán mới
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Server từ chối lưu dữ liệu. {(int)response.StatusCode}: {content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Không thể gửi dữ liệu đến API: {ex.Message}");
+        }
+    }
+
+    private async Task HandleDeletePoi(Poi poi)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirmDeletePoi", poi.Name);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/Pois/{poi.Poiid}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("showSuccessMessage", "Đã xóa!", $"Đã xóa địa điểm {poi.Name}.");
+                await LoadData();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Không thể xóa. {(int)response.StatusCode}: {content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Không thể gửi yêu cầu xóa đến API: {ex.Message}");
+        }
+    }
+
+    private static bool IsActiveStatus(string? status)
+        => string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(status, "1", StringComparison.OrdinalIgnoreCase);
+
+    public class Poi
+    {
+        public int Poiid { get; set; }
+        public string Name { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+        public double? Radius { get; set; }
+        public string? Thumbnail { get; set; }
+        public string? Status { get; set; }
+        public DateTime? CreatedAt { get; set; }
+    }
+}

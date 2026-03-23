@@ -1,28 +1,62 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">VinhKhanhWebAdmin</a>
+        <a class="navbar-brand fw-bold text-white" href="/home">
+            <i class="bi bi-shield-lock-fill text-primary me-2"></i>Admin Panel
+        </a>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+<div class="nav-scrollable">
+    <nav class="flex-column mt-2 px-2">
+        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Tổng Quan</div>
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/home" Match="NavLinkMatch.All">
+                <i class="bi bi-speedometer2 nav-icon"></i> Trang chủ
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/analytics">
+                <i class="bi bi-graph-up-arrow nav-icon"></i> Thống kê số liệu
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Kiểm Duyệt</div>
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/approve-owners">
+                <i class="bi bi-person-check nav-icon"></i> Duyệt Chủ Quán
+            </NavLink>
+        </div>
+
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/submissions">
+                <i class="bi bi-journal-check nav-icon"></i> Duyệt Bài Đăng
+            </NavLink>
+        </div>
+
+        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Quản Lý</div>
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/pois">
+                <i class="bi bi-shop nav-icon"></i> Danh sách Địa điểm
+            </NavLink>
+        </div>
+
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/users">
+                <i class="bi bi-people nav-icon"></i> Quản lý Users
+            </NavLink>
+        </div>
+
+        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Hệ Thống</div>
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/ai-settings">
+                <i class="bi bi-robot nav-icon"></i> Cấu hình AI Gemini
+            </NavLink>
+        </div>
+
+        <div class="nav-item">
+            <NavLink class="nav-link custom-nav-link" href="/logs">
+                <i class="bi bi-list-check nav-icon"></i> Nhật ký Audit Logs
             </NavLink>
         </div>
     </nav>

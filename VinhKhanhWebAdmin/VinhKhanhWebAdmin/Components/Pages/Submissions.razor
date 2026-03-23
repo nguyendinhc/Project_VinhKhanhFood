@@ -1,0 +1,17 @@
+@page "/submissions"
+
+<PageTitle>Duy?t Bài ??ng</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h3 class="fw-bold text-primary mb-2"><i class="bi bi-journal-check me-2"></i>Duy?t Bài ??ng</h3>
+                <p class="text-muted mb-0">Trang này ?ã ???c t?o nhanh. B?n có th? b? sung quy trình ki?m duy?t bài ??ng t?i ?ây.</p>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-danger mt-4">B?n ch?a ??ng nh?p. Vui lòng quay l?i trang ??ng nh?p.</div>
+    </NotAuthorized>
+</AuthorizeView>

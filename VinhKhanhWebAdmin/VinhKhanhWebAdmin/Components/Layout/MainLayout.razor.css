@@ -1,4 +1,4 @@
-.page {
+﻿.page {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -9,9 +9,10 @@ main {
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    /* Ép dùng màu Dark Slate xịn xò, chặn luôn cái gradient cũ của Blazor */
+    background-color: #0f172a !important;
+    background-image: none !important;
 }
-
 .top-row {
     background-color: #f7f7f7;
     border-bottom: 1px solid #d6d5d5;

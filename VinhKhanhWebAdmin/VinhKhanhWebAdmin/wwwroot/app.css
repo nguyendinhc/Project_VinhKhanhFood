@@ -1,5 +1,8 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 a, .btn-link {
@@ -48,4 +51,39 @@ h1:focus {
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
+}
+
+.vk-swal-popup {
+    border-radius: 16px !important;
+    border: 1px solid #dbeafe !important;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18) !important;
+    font-family: 'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif !important;
+}
+
+.vk-swal-title {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+.vk-swal-text {
+    color: #334155 !important;
+}
+
+.vk-swal-confirm,
+.vk-swal-cancel {
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 0.55rem 1rem !important;
+    font-weight: 600 !important;
+    margin: 0 .25rem !important;
+}
+
+.vk-swal-confirm {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: #fff !important;
+}
+
+.vk-swal-cancel {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
 }
