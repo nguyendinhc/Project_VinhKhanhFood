@@ -18,9 +18,9 @@ public partial class Poi
     public string Introduction { get; set; } = "Nội dung thuyết minh đang được tải...";
 
     // Dòng này để tự động tạo link ảnh từ Thumbnail
-    public string ImageUrl => string.IsNullOrEmpty(Thumbnail)
+    public string ImageUrl => string.IsNullOrWhiteSpace(Thumbnail)
         ? "dotnet_bot.png"
-        : $"http://10.207.88.26:5100/images/{Thumbnail}"; // Thay IP của bạn vào đây
+        : Thumbnail;
     // ------------------------------------------
 
     public virtual ICollection<Menu> Menus { get; set; } = new List<Menu>();

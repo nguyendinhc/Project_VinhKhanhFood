@@ -4,6 +4,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @using System.Net.Http.Headers
+@using Microsoft.JSInterop
 
 <PageTitle>Quản lý Vĩnh Khánh</PageTitle>
 
@@ -135,8 +136,16 @@
                         </div>
                         <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
                             <button type="button" class="btn btn-outline-secondary px-4 rounded-pill" @onclick="ĐóngFormThêmMới">Hủy bỏ</button>
-                            <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" @onclick="HandleSavePoi">
-                                <i class="bi bi-cloud-arrow-up me-1"></i> @(isEditMode ? "Cập nhật" : "Lưu vào Hệ thống")
+                            <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" @onclick="HandleSavePoi" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Đang xử lý...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-cloud-arrow-up me-1"></i> @(isEditMode ? "Cập nhật" : "Lưu vào Hệ thống")
+                                }
                             </button>
                         </div>
                     </div>
@@ -159,6 +168,7 @@
     private List<Poi> danhSachQuan = new();
     private string errorMessage = "";
     private bool isLoading = true;
+    private bool isSaving = false;
     private bool hienThiFormThem = false;
     private bool isEditMode = false;
 
@@ -236,21 +246,39 @@
     // 2. HÀM XỬ LÝ LƯU/CẬP NHẬT DỮ LIỆU
     private async Task HandleSavePoi()
     {
+        if (isSaving)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(newPoi.Name))
         {
-            await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", "Vui lòng nhập tên quán!");
+            await ShowErrorAsync("Lỗi!", "Vui lòng nhập tên quán!");
             return;
         }
 
         try
         {
+            isSaving = true;
+            var payload = new Poi
+            {
+                Poiid = newPoi.Poiid,
+                Name = newPoi.Name?.Trim(),
+                Latitude = newPoi.Latitude,
+                Longitude = newPoi.Longitude,
+                Radius = newPoi.Radius,
+                Thumbnail = string.IsNullOrWhiteSpace(newPoi.Thumbnail) ? null : newPoi.Thumbnail.Trim(),
+                Status = newPoi.Status,
+                CreatedAt = newPoi.CreatedAt
+            };
+
             var response = isEditMode
-                ? await Http.PutAsJsonAsync($"api/Pois/{newPoi.Poiid}", newPoi)
-                : await Http.PostAsJsonAsync("api/Pois", newPoi);
+                ? await Http.PutAsJsonAsync($"api/Pois/{newPoi.Poiid}", payload)
+                : await Http.PostAsJsonAsync("api/Pois", payload);
 
             if (response.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("showSuccessMessage", "Thành công!", isEditMode ? $"Đã cập nhật {newPoi.Name}." : $"Đã thêm {newPoi.Name} vào hệ thống.");
+                await ShowSuccessAsync("Thành công!", isEditMode ? $"Đã cập nhật {newPoi.Name}." : $"Đã thêm {newPoi.Name} vào hệ thống.");
                 hienThiFormThem = false;
                 isEditMode = false;
                 await LoadData(); // Tải lại bảng để thấy quán mới
@@ -258,12 +286,16 @@
             else
             {
                 var content = await response.Content.ReadAsStringAsync();
-                await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Server từ chối lưu dữ liệu. {(int)response.StatusCode}: {content}");
+                await ShowErrorAsync("Lỗi!", $"Server từ chối lưu dữ liệu. {(int)response.StatusCode}: {content}");
             }
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Không thể gửi dữ liệu đến API: {ex.Message}");
+            await ShowErrorAsync("Lỗi!", $"Không thể gửi dữ liệu đến API: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
         }
     }
 
@@ -281,18 +313,44 @@
 
             if (response.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("showSuccessMessage", "Đã xóa!", $"Đã xóa địa điểm {poi.Name}.");
+                await ShowSuccessAsync("Đã xóa!", $"Đã xóa địa điểm {poi.Name}.");
                 await LoadData();
             }
             else
             {
                 var content = await response.Content.ReadAsStringAsync();
-                await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Không thể xóa. {(int)response.StatusCode}: {content}");
+                await ShowErrorAsync("Lỗi!", $"Không thể xóa. {(int)response.StatusCode}: {content}");
             }
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("showErrorMessage", "Lỗi!", $"Không thể gửi yêu cầu xóa đến API: {ex.Message}");
+            await ShowErrorAsync("Lỗi!", $"Không thể gửi yêu cầu xóa đến API: {ex.Message}");
+        }
+    }
+
+    private async Task ShowSuccessAsync(string title, string message)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("showSuccessMessage", title, message);
+        }
+        catch (JSException)
+        {
+            errorMessage = $"{title} {message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowErrorAsync(string title, string message)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("showErrorMessage", title, message);
+        }
+        catch (JSException)
+        {
+            errorMessage = $"{title} {message}";
+            StateHasChanged();
         }
     }
 

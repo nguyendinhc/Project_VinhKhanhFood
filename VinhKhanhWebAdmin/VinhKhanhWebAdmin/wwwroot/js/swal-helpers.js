@@ -1,3 +1,4 @@
+﻿const vkSwal = Swal.mixin({
 const vkSwal = Swal.mixin({
     customClass: {
         popup: 'vk-swal-popup',
@@ -11,12 +12,12 @@ const vkSwal = Swal.mixin({
 
 window.confirmDeletePoi = async function (poiName) {
     const result = await vkSwal.fire({
-        title: 'X�c nh?n x�a?',
-        text: `B?n c� ch?c mu?n x�a ??a ?i?m "${poiName}" kh�ng?`,
+        title: 'Xác nhận xóa?',
+        text: `Bạn có chắc muốn xóa địa điểm "${poiName}" không?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'X�a ngay',
-        cancelButtonText: 'H?y',
+        confirmButtonText: 'Xóa ngay',
+        cancelButtonText: 'Hủy',
         reverseButtons: true,
         focusCancel: true
     });
@@ -29,7 +30,7 @@ window.showSuccessMessage = async function (title, text) {
         title,
         text,
         icon: 'success',
-        confirmButtonText: '?� hi?u'
+        confirmButtonText: 'Đã hiểu'
     });
 };
 
@@ -38,6 +39,6 @@ window.showErrorMessage = async function (title, text) {
         title,
         text,
         icon: 'error',
-        confirmButtonText: '?�ng'
+        confirmButtonText: 'Đóng'
     });
 };
