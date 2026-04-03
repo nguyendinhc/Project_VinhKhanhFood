@@ -8,15 +8,39 @@
     <Grid>
         <zxing:CameraBarcodeReaderView x:Name="barcodeReader"
                                        BarcodesDetected="OnBarcodesDetected"
-                                       IsDetecting="True" />
+                                       IsDetecting="True"
+                                       CameraLocation="Rear" />
 
-        <Label Text="📷 Đưa mã QR vào khung hình" 
-               TextColor="White" 
-               FontSize="18" 
-               FontAttributes="Bold" 
-               HorizontalOptions="Center" 
-               VerticalOptions="End" 
-               Margin="0,0,0,50" />
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="260" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <BoxView Grid.Row="0" Grid.ColumnSpan="3" Color="#80000000" />
+            <BoxView Grid.Row="1" Grid.Column="0" Color="#80000000" />
+            <BoxView Grid.Row="1" Grid.Column="2" Color="#80000000" />
+            <BoxView Grid.Row="2" Grid.ColumnSpan="3" Color="#80000000" />
+
+            <Border Grid.Row="1" Grid.Column="1"
+                    Stroke="White"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 24"
+                    BackgroundColor="Transparent" />
+        </Grid>
+
+        <Label Text="📷 Đưa mã QR vào khung hình"
+               TextColor="White"
+               FontSize="16"
+               FontAttributes="Bold"
+               HorizontalOptions="Center"
+               VerticalOptions="End"
+               Margin="0,0,0,36" />
     </Grid>
-
 </ContentPage>

@@ -1,9 +1,8 @@
-﻿using ZXing.Net.Maui;
-
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using VinhKhanhFood.Models;
 using VinhKhanhFood.Services;
 using ZXing.Net.Maui;
+using ZXing.Net.Maui.Controls;
 
 namespace VinhKhanhFood;
 
@@ -13,6 +12,14 @@ public partial class ScanQRPage : ContentPage
     private readonly OfflineSyncService _offlineSyncService;
     private List<Poi> _pois = new();
     private bool _isHandlingScan;
+    private CameraBarcodeReaderView? _barcodeReader;
+    private readonly BarcodeReaderOptions _barcodeOptions = new()
+    {
+        Formats = BarcodeFormat.QrCode,
+        AutoRotate = true,
+        TryHarder = false,
+        TryInverted = false
+    };
 
     public ScanQRPage()
     {
@@ -25,8 +32,18 @@ public partial class ScanQRPage : ContentPage
         base.OnAppearing();
 
         var hasPermission = await EnsureCameraPermissionAsync();
-        barcodeReader.IsDetecting = hasPermission;
         _isHandlingScan = false;
+
+        ResetCameraView();
+
+        if (hasPermission)
+        {
+            await Task.Delay(200);
+            _barcodeReader = CreateCameraView();
+            cameraHost.Children.Add(_barcodeReader);
+            await Task.Delay(150);
+            _barcodeReader.IsDetecting = true;
+        }
 
         if (_pois.Count == 0)
         {
@@ -44,7 +61,36 @@ public partial class ScanQRPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
-        barcodeReader.IsDetecting = false;
+        if (_barcodeReader != null)
+        {
+            _barcodeReader.IsDetecting = false;
+        }
+    }
+
+    private void ResetCameraView()
+    {
+        if (_barcodeReader != null)
+        {
+            _barcodeReader.IsDetecting = false;
+            _barcodeReader.IsEnabled = false;
+            _barcodeReader.IsVisible = false;
+            _barcodeReader.BarcodesDetected -= OnBarcodesDetected;
+        }
+
+        cameraHost.Children.Clear();
+        _barcodeReader = null;
+    }
+
+    private CameraBarcodeReaderView CreateCameraView()
+    {
+        var view = new CameraBarcodeReaderView
+        {
+            CameraLocation = CameraLocation.Rear,
+            Options = _barcodeOptions,
+            IsDetecting = false
+        };
+        view.BarcodesDetected += OnBarcodesDetected;
+        return view;
     }
 
     private async Task<bool> EnsureCameraPermissionAsync()
@@ -78,7 +124,12 @@ public partial class ScanQRPage : ContentPage
         }
 
         _isHandlingScan = true;
-        barcodeReader.IsDetecting = false;
+        if (_barcodeReader != null)
+        {
+            _barcodeReader.IsDetecting = false;
+            _barcodeReader.IsEnabled = false;
+            _barcodeReader.IsVisible = false;
+        }
         var rawValue = result.Value?.Trim() ?? string.Empty;
 
         MainThread.BeginInvokeOnMainThread(async () =>
@@ -105,7 +156,12 @@ public partial class ScanQRPage : ContentPage
                 if (targetPoi == null)
                 {
                     await DisplayAlert("Thông báo", $"Không tìm thấy quán cho mã: {rawValue}", "OK");
-                    barcodeReader.IsDetecting = true;
+                    if (_barcodeReader != null)
+                    {
+                        _barcodeReader.IsDetecting = true;
+                        _barcodeReader.IsEnabled = true;
+                        _barcodeReader.IsVisible = true;
+                    }
                     _isHandlingScan = false;
                     return;
                 }
@@ -115,7 +171,12 @@ public partial class ScanQRPage : ContentPage
             catch (Exception ex)
             {
                 await DisplayAlert("Lỗi", "Không thể xử lý mã QR: " + ex.Message, "OK");
-                barcodeReader.IsDetecting = true;
+                if (_barcodeReader != null)
+                {
+                    _barcodeReader.IsDetecting = true;
+                    _barcodeReader.IsEnabled = true;
+                    _barcodeReader.IsVisible = true;
+                }
                 _isHandlingScan = false;
             }
         });
@@ -148,3 +209,5 @@ public partial class ScanQRPage : ContentPage
         return null;
     }
 }
+
+
