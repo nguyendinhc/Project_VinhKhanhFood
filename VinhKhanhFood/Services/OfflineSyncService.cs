@@ -20,6 +20,22 @@ public class OfflineSyncService
     public async Task<int> SyncPoisAsync()
     {
         var pois = await _apiService.GetPoisAsync();
+        foreach (var poi in pois)
+        {
+            try
+            {
+                var detailPoi = await _apiService.GetPoiByIdAsync(poi.Poiid);
+                if (detailPoi != null)
+                {
+                    poi.Menus = detailPoi.Menus ?? poi.Menus;
+                    poi.LocalThumbnailPath ??= detailPoi.LocalThumbnailPath;
+                }
+            }
+            catch
+            {
+            }
+        }
+
         foreach (var item in pois)
         {
             item.Introduction = item.Poilocalizations?.FirstOrDefault()?.Description

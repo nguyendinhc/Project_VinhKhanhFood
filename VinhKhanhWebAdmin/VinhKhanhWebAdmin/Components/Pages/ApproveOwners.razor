@@ -1,17 +1,200 @@
 ﻿@page "/approve-owners"
+@attribute [Authorize(Roles = "Admin")]
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <PageTitle>Duyệt Chủ Quán</PageTitle>
 
 <AuthorizeView>
     <Authorized>
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h3 class="fw-bold text-primary mb-2"><i class="bi bi-person-check me-2"></i>Duyệt Chủ Quán</h3>
-                <p class="text-muted mb-0">Tính năng đang phát triển.</p>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="m-0 text-primary fw-bold"><i class="bi bi-person-check me-2"></i>Duyệt Chủ Quán</h2>
+            <button class="btn btn-outline-primary rounded-pill" @onclick="LoadPendingOwnersAsync" disabled="@isLoading">
+                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+            </button>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Đang tải danh sách chủ quán chờ duyệt...</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+        else
+        {
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="10%">ID</th>
+                                    <th width="20%">Username</th>
+                                    <th width="25%">Họ tên</th>
+                                    <th width="25%">Email</th>
+                                    <th width="20%">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (pendingOwners.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Không có đăng ký chờ duyệt.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var owner in pendingOwners)
+                                    {
+                                        <tr>
+                                            <td>#@owner.UserId</td>
+                                            <td class="fw-semibold">@owner.UserName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(owner.FullName) ? "-" : owner.FullName)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(owner.Email) ? "-" : owner.Email)</td>
+                                            <td>
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-sm btn-success" @onclick="() => ApproveOwnerAsync(owner)">Duyệt</button>
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RejectOwnerAsync(owner)">Từ chối</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <div class="alert alert-danger mt-4">Bạn chưa đăng nhập. Vui lòng quay lại trang đăng nhập.</div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private List<PendingOwner> pendingOwners = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingOwnersAsync();
+    }
+
+    private async Task LoadPendingOwnersAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            pendingOwners = await Http.GetFromJsonAsync<List<PendingOwner>>("api/users/pending-owners") ?? new List<PendingOwner>();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await HandleUnauthorizedAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải danh sách chờ duyệt: {ex.Message}";
+            pendingOwners = new List<PendingOwner>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveOwnerAsync(PendingOwner owner)
+    {
+        if (!await ConfirmAsync($"Duyệt chủ quán {owner.UserName}?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.PutAsync($"api/users/{owner.UserId}/approve-owner", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(content) ? "Không thể duyệt chủ quán." : content;
+                return;
+            }
+
+            await LoadPendingOwnersAsync();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await HandleUnauthorizedAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể duyệt chủ quán: {ex.Message}";
+        }
+    }
+
+    private async Task RejectOwnerAsync(PendingOwner owner)
+    {
+        if (!await ConfirmAsync($"Từ chối chủ quán {owner.UserName}?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/users/{owner.UserId}/reject-owner");
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(content) ? "Không thể từ chối chủ quán." : content;
+                return;
+            }
+
+            await LoadPendingOwnersAsync();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await HandleUnauthorizedAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể từ chối chủ quán: {ex.Message}";
+        }
+    }
+
+    private async Task<bool> ConfirmAsync(string message)
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("confirm", message);
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private async Task HandleUnauthorizedAsync()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+
+    public class PendingOwner
+    {
+        public int UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+    }
+}

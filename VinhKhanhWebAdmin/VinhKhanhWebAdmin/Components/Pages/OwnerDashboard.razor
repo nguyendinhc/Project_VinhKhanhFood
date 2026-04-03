@@ -1,17 +1,16 @@
-@page "/owner-dashboard"
-@page "/owner-dashboard"
-@attribute [Authorize(Roles = "Owner,Role2")]
+﻿@page "/owner-dashboard"
+@attribute [Authorize(Roles = "Owner")]
 @using Microsoft.AspNetCore.Authorization
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IJSRuntime JS
 
-<PageTitle>B?ng ?i?u khi?n ch? qu�n</PageTitle>
+<PageTitle>Bảng điều khiển chủ quán</PageTitle>
 
 <div class="container-fluid p-0 owner-dashboard">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-dark m-0">Xin ch�o, <span class="text-warning">@displayName</span> ??</h2>
-            <p class="text-muted m-0">?�y l� khu v?c qu?n l� d�nh cho ch? qu�n.</p>
+            <h2 class="fw-bold text-dark m-0">Xin chào, <span class="text-warning">@displayName</span> 👋</h2>
+            <p class="text-muted m-0">Đây là khu vực quản lý dành cho chủ quán.</p>
         </div>
         <button class="btn btn-white border shadow-sm rounded-pill px-3">
             <i class="bi bi-calendar-event me-2 text-secondary"></i> @DateTime.Now.ToString("dd/MM/yyyy")
@@ -22,27 +21,27 @@
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
-                    <div class="small text-muted">M�n ?ang kinh doanh</div>
+                    <div class="small text-muted">Món đang kinh doanh</div>
                     <div class="fs-2 fw-bold text-primary">24</div>
-                    <div class="small text-success">+2 m�n tu?n n�y</div>
+                    <div class="small text-success">+2 món tuần này</div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
-                    <div class="small text-muted">L??t xem qu�n h�m nay</div>
+                    <div class="small text-muted">Lượt xem quán hôm nay</div>
                     <div class="fs-2 fw-bold text-info">186</div>
-                    <div class="small text-muted">D? li?u realtime</div>
+                    <div class="small text-muted">Dữ liệu realtime</div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
-                    <div class="small text-muted">Y�u c?u c?n x? l�</div>
+                    <div class="small text-muted">Yêu cầu cần xử lý</div>
                     <div class="fs-2 fw-bold text-danger">3</div>
-                    <div class="small text-muted">C?p nh?t menu / ph?n h?i</div>
+                    <div class="small text-muted">Cập nhật menu / phản hồi</div>
                 </div>
             </div>
         </div>
@@ -50,13 +49,16 @@
 
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body">
-            <h5 class="fw-bold mb-3"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Thao t�c nhanh</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Thao tác nhanh</h5>
             <div class="d-flex flex-wrap gap-2">
+                <a href="/owner-pois" class="btn btn-outline-primary rounded-pill px-3">
+                    <i class="bi bi-shop me-1"></i> Quản lý quán
+                </a>
                 <a href="/menus" class="btn btn-primary rounded-pill px-3">
-                    <i class="bi bi-journal-text me-1"></i> Qu?n l� menu
+                    <i class="bi bi-journal-text me-1"></i> Quản lý menu
                 </a>
                 <button class="btn btn-outline-secondary rounded-pill px-3" disabled>
-                    <i class="bi bi-shop me-1"></i> C?p nh?t th�ng tin qu�n (s?p c�)
+                    <i class="bi bi-shop me-1"></i> Cập nhật thông tin quán (sắp có)
                 </button>
             </div>
         </div>

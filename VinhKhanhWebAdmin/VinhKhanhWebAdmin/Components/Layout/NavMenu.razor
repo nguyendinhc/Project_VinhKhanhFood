@@ -1,70 +1,108 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand fw-bold text-white" href="/home">
-            <i class="bi bi-shield-lock-fill text-primary me-2"></i>Admin Panel
-        </a>
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <a class="navbar-brand fw-bold text-white" href="/home">
+                    <i class="bi bi-shield-lock-fill text-primary me-2"></i>Admin Panel
+                </a>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Roles="Owner">
+            <Authorized>
+                <a class="navbar-brand fw-bold text-white" href="/owner-dashboard">
+                    <i class="bi bi-shop-window text-warning me-2"></i>Owner Panel
+                </a>
+            </Authorized>
+        </AuthorizeView>
     </div>
 </div>
 
 <div class="nav-scrollable">
     <nav class="flex-column mt-2 px-2">
-        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Tổng Quan</div>
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/home" Match="NavLinkMatch.All">
-                <i class="bi bi-speedometer2 nav-icon"></i> Trang chủ
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div class="nav-category text-uppercase mt-3 mb-2 px-3">Tổng Quan</div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/home" Match="NavLinkMatch.All">
+                        <i class="bi bi-speedometer2 nav-icon"></i> Trang chủ
+                    </NavLink>
+                </div>
 
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/analytics">
-                <i class="bi bi-graph-up-arrow nav-icon"></i> Thống kê số liệu
-            </NavLink>
-        </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/analytics">
+                        <i class="bi bi-graph-up-arrow nav-icon"></i> Thống kê số liệu
+                    </NavLink>
+                </div>
 
-        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Kiểm Duyệt</div>
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/approve-owners">
-                <i class="bi bi-person-check nav-icon"></i> Duyệt Chủ Quán
-            </NavLink>
-        </div>
+                <div class="nav-category text-uppercase mt-3 mb-2 px-3">Kiểm Duyệt</div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/approve-owners">
+                        <i class="bi bi-person-check nav-icon"></i> Duyệt Chủ Quán
+                    </NavLink>
+                </div>
 
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/submissions">
-                <i class="bi bi-journal-check nav-icon"></i> Duyệt Bài Đăng
-            </NavLink>
-        </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/submissions">
+                        <i class="bi bi-journal-check nav-icon"></i> Duyệt Bài Đăng
+                    </NavLink>
+                </div>
 
-        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Quản Lý</div>
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/pois">
-                <i class="bi bi-shop nav-icon"></i> Danh sách Địa điểm
-            </NavLink>
-        </div>
+                <div class="nav-category text-uppercase mt-3 mb-2 px-3">Quản Lý</div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/pois">
+                        <i class="bi bi-shop nav-icon"></i> Danh sách Địa điểm
+                    </NavLink>
+                </div>
 
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/menus">
-                <i class="bi bi-journal-text nav-icon"></i> Quản lý Menu
-            </NavLink>
-        </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/users">
+                        <i class="bi bi-people nav-icon"></i> Quản lý Users
+                    </NavLink>
+                </div>
 
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/users">
-                <i class="bi bi-people nav-icon"></i> Quản lý Users
-            </NavLink>
-        </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/menus">
+                        <i class="bi bi-journal-text nav-icon"></i> Quản lý Menu
+                    </NavLink>
+                </div>
 
-        <div class="nav-category text-uppercase mt-3 mb-2 px-3">Hệ Thống</div>
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/ai-settings">
-                <i class="bi bi-robot nav-icon"></i> Cấu hình AI Gemini
-            </NavLink>
-        </div>
+                <div class="nav-category text-uppercase mt-3 mb-2 px-3">Hệ Thống</div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/ai-settings">
+                        <i class="bi bi-robot nav-icon"></i> Cấu hình AI Gemini
+                    </NavLink>
+                </div>
 
-        <div class="nav-item">
-            <NavLink class="nav-link custom-nav-link" href="/logs">
-                <i class="bi bi-list-check nav-icon"></i> Nhật ký Audit Logs
-            </NavLink>
-        </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/logs">
+                        <i class="bi bi-list-check nav-icon"></i> Nhật ký Audit Logs
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Owner">
+            <Authorized>
+                <div class="nav-category text-uppercase mt-3 mb-2 px-3">Quản Lý Quán</div>
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/owner-dashboard" Match="NavLinkMatch.All">
+                        <i class="bi bi-speedometer2 nav-icon"></i> Dashboard chủ quán
+                    </NavLink>
+                </div>
+
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/owner-pois">
+                        <i class="bi bi-shop nav-icon"></i> Quản lý quán
+                    </NavLink>
+                </div>
+
+                <div class="nav-item">
+                    <NavLink class="nav-link custom-nav-link" href="/menus">
+                        <i class="bi bi-journal-text nav-icon"></i> Quản lý Menu
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
     </nav>
 </div>
 

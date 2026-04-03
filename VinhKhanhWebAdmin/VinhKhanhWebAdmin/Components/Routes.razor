@@ -1,7 +1,18 @@
 ﻿<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
-            <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <LayoutView Layout="@typeof(Layout.EmptyLayout)">
+                        <div class="alert alert-danger mt-5 shadow-sm border-0 text-center">
+                            <h3 class="alert-heading"><i class="bi bi-shield-x" style="font-size: 3rem;"></i></h3>
+                            <h4>Không có quyền truy cập</h4>
+                            <p>Vui lòng đăng nhập bằng tài khoản phù hợp.</p>
+                            <a href="/" class="btn btn-danger mt-3 px-4 rounded-pill">Về trang đăng nhập</a>
+                        </div>
+                    </LayoutView>
+                </NotAuthorized>
+            </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>

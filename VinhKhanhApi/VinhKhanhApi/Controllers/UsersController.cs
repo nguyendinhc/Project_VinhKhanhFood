@@ -126,6 +126,73 @@ namespace VinhKhanhApi.Controllers
             return Ok(roles);
         }
 
+        [HttpGet("pending-owners")]
+        public async Task<ActionResult<IEnumerable<UserItemDto>>> GetPendingOwnersAsync()
+        {
+            var users = await _context.AdminUsers
+                .AsNoTracking()
+                .Where(u => u.RoleId == null)
+                .OrderBy(u => u.UserId)
+                .Select(u => new UserItemDto
+                {
+                    UserId = u.UserId,
+                    UserName = u.UserName,
+                    FullName = u.FullName,
+                    Email = u.Email,
+                    RoleId = u.RoleId,
+                    RoleName = null
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+        [HttpPost("register-owner")]
+        [AllowAnonymous]
+        public async Task<ActionResult<UserItemDto>> RegisterOwnerAsync([FromBody] RegisterOwnerRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.UserName))
+            {
+                return BadRequest("Tên đăng nhập không được để trống.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                return BadRequest("Mật khẩu không được để trống.");
+            }
+
+            var userName = request.UserName.Trim();
+            var isDuplicate = await _context.AdminUsers
+                .AnyAsync(u => u.UserName == userName);
+
+            if (isDuplicate)
+            {
+                return Conflict("Tên đăng nhập đã tồn tại.");
+            }
+
+            var user = new AdminUser
+            {
+                UserName = userName,
+                PasswordHash = request.Password.Trim(),
+                FullName = string.IsNullOrWhiteSpace(request.FullName) ? null : request.FullName.Trim(),
+                Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
+                RoleId = null
+            };
+
+            _context.AdminUsers.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new UserItemDto
+            {
+                UserId = user.UserId,
+                UserName = user.UserName,
+                FullName = user.FullName,
+                Email = user.Email,
+                RoleId = user.RoleId,
+                RoleName = null
+            });
+        }
+
         [HttpPost]
         public async Task<ActionResult<UserItemDto>> CreateUserAsync([FromBody] CreateUserRequest request)
         {
@@ -225,6 +292,33 @@ namespace VinhKhanhApi.Controllers
 
             await _context.SaveChangesAsync();
             await AddAuditLogAsync($"Update user #{user.UserId} ({user.UserName})");
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteUserAsync(int id)
+        {
+            var user = await _context.AdminUsers.FirstOrDefaultAsync(u => u.UserId == id);
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy user.");
+            }
+
+            var actorUserId = GetActorUserId();
+            if (user.RoleId == AdminRoleId && user.UserId != actorUserId)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, "Không thể xóa tài khoản Admin khác.");
+            }
+
+            if (user.UserId == actorUserId)
+            {
+                return BadRequest("Không thể tự xóa tài khoản của chính mình.");
+            }
+
+            _context.AdminUsers.Remove(user);
+            await _context.SaveChangesAsync();
+            await AddAuditLogAsync($"Delete user #{user.UserId} ({user.UserName})");
 
             return NoContent();
         }
@@ -398,6 +492,14 @@ namespace VinhKhanhApi.Controllers
             public string? FullName { get; set; }
             public string? Email { get; set; }
             public int? RoleId { get; set; }
+        }
+
+        public class RegisterOwnerRequest
+        {
+            public string UserName { get; set; } = string.Empty;
+            public string Password { get; set; } = string.Empty;
+            public string? FullName { get; set; }
+            public string? Email { get; set; }
         }
 
         public class UpdateUserRequest

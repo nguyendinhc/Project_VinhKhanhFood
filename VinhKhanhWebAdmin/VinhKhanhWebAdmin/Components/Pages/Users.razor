@@ -1,4 +1,5 @@
 ﻿@page "/users"
+@attribute [Authorize(Roles = "Admin")]
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IJSRuntime JS
@@ -128,10 +129,11 @@
                                                 <span class="badge bg-info-subtle text-info border border-info-subtle">@(string.IsNullOrWhiteSpace(user.RoleName) ? "Chưa gán" : user.RoleName)</span>
                                             </td>
                                             <td>
-                                                <div class="d-flex gap-1">
-                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Sửa</button>
-                                                    <button class="btn btn-sm btn-outline-warning" @onclick="() => OpenResetPasswordModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Đặt lại MK</button>
-                                                </div>
+                                                 <div class="d-flex gap-1">
+                                                     <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Sửa</button>
+                                                     <button class="btn btn-sm btn-outline-warning" @onclick="() => OpenResetPasswordModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Đặt lại MK</button>
+                                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUserAsync(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Xóa</button>
+                                                 </div>
                                             </td>
                                         </tr>
                                     }
@@ -580,6 +582,56 @@
         finally
         {
             isSavingPassword = false;
+        }
+    }
+
+    private async Task DeleteUserAsync(UserItem user)
+    {
+        if (!CanManageUser(user))
+        {
+            errorMessage = GetCannotManageReason(user);
+            return;
+        }
+
+        if (!await ConfirmAsync($"Xóa user {user.UserName}?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/users/{user.UserId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadUsersAsync();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(content)
+                    ? $"Không thể xóa user. Mã lỗi: {(int)response.StatusCode}."
+                    : content;
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await HandleUnauthorizedAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể xóa user: {ex.Message}";
+        }
+    }
+
+    private async Task<bool> ConfirmAsync(string message)
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("confirm", message);
+        }
+        catch
+        {
+            return true;
         }
     }
 

@@ -66,7 +66,7 @@
                         <DataTemplate>
                             <Frame Padding="10" Margin="0,5" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
                                 <Grid ColumnDefinitions="100,*" ColumnSpacing="12">
-                                    <Image Source="{Binding Image}"
+                                    <Image Source="{Binding ImageUrl}"
                                            HeightRequest="80"
                                            WidthRequest="100"
                                            Aspect="AspectFill" />

@@ -179,7 +179,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/Auth/login-admin", loginModel);
+            var response = await Http.PostAsJsonAsync("api/Auth/login-web", loginModel);
 
             if (response.IsSuccessStatusCode)
             {
@@ -210,8 +210,9 @@
                 }
                 ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(result.Token);
                 await JS.InvokeVoidAsync("sessionStorage.setItem", "showLoginSuccessPopup", "1");
-                // 2. Chuyển hướng sang trang chủ quản trị
-                Navigation.NavigateTo("/home");
+                // 2. Chuyển hướng theo quyền đăng nhập
+                var targetPage = result.Role == "Owner" ? "/owner-dashboard" : "/home";
+                Navigation.NavigateTo(targetPage);
             }
             else
             {
