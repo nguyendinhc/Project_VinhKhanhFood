@@ -19,19 +19,19 @@
     </Shell.Resources>
     <TabBar>
         <Tab Title="Khám phá" Icon="home_icon.png">
-            <ShellContent ContentTemplate="{DataTemplate local:MainPage}" />
+            <ShellContent Route="main" ContentTemplate="{DataTemplate local:MainPage}" />
         </Tab>
 
         <Tab Title="Yêu thích" Icon="heart_icon.png">
-            <ShellContent ContentTemplate="{DataTemplate local:FavoritePage}" />
+            <ShellContent Route="favorites" ContentTemplate="{DataTemplate local:FavoritePage}" />
         </Tab>
 
         <Tab Title="Quét QR" Icon="qr_icon.png">
-            <ShellContent ContentTemplate="{DataTemplate local:ScanQRPage}" />
+            <ShellContent Route="scanqr" ContentTemplate="{DataTemplate local:ScanQRPage}" />
         </Tab>
 
         <Tab Title="Cài đặt" Icon="settings_icon.png">
-            <ShellContent ContentTemplate="{DataTemplate local:SettingsPage}" />
+            <ShellContent Route="settings" ContentTemplate="{DataTemplate local:SettingsPage}" />
         </Tab>
     </TabBar>
 </Shell>

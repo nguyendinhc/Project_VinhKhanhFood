@@ -1,6 +1,9 @@
 ﻿using Microsoft.Maui.Controls.Maps; // Dùng cho Pin và Map
 using Microsoft.Maui.Maps;
+using Newtonsoft.Json.Linq;
+using System.Globalization;
 using System.Net.NetworkInformation;
+using System.Text;
 using System.Text.RegularExpressions;
 using VinhKhanhFood.Models;
 using VinhKhanhFood.Services;
@@ -10,8 +13,10 @@ namespace VinhKhanhFood;
 
 public partial class MainPage : ContentPage
 {
+    private static readonly HttpClient _httpClient = new();
     private List<Poi> _allPois;
     ApiService _apiService = new ApiService();
+    private readonly OfflineSyncService _offlineSyncService;
     bool _isNavigating;
     // Lưu danh sách các quán đã được thuyết minh để không bị nói lặp lại liên tục khi đang đứng yên một chỗ
     private HashSet<int> _spokenPoiIds = new HashSet<int>();
@@ -19,12 +24,17 @@ public partial class MainPage : ContentPage
     private bool _isCheckingProximity;
     private bool _isSpeaking;
     private Microsoft.Maui.Controls.Maps.Circle? _userLocationCircle;
+    private Microsoft.Maui.Controls.Maps.Circle? _nearestPoiCircle;
+    private Polyline? _routePolyline;
     private bool _hasCenteredUserLocation;
+    private bool _hasRequestedInitialLocation;
+    private Location? _lastKnownLocation;
     private const double TriggerDistanceMeters = 50;
     private const double ResetDistanceMeters = 80;
     public MainPage()
     {
         InitializeComponent();
+        _offlineSyncService = new OfflineSyncService(_apiService);
         LoadData();
     }
 
@@ -48,7 +58,16 @@ public partial class MainPage : ContentPage
         _isNavigating = true;
         try
         {
-            await Navigation.PushAsync(new DetailPage(poi));
+            var detailPoi = await _apiService.GetPoiByIdAsync(poi.Poiid);
+            if (detailPoi != null)
+            {
+                detailPoi.Introduction = detailPoi.Poilocalizations?.FirstOrDefault()?.Description
+                                         ?? poi.Introduction
+                                         ?? "Chào mừng bạn đến với " + detailPoi.Name;
+                detailPoi.Description = poi.Description ?? "Địa điểm tham quan hấp dẫn tại Vĩnh Khánh";
+            }
+
+            await Navigation.PushAsync(new DetailPage(detailPoi ?? poi));
         }
         finally
         {
@@ -65,7 +84,22 @@ public partial class MainPage : ContentPage
 
             myMap.IsShowingUser = true;
 
-            var data = await _apiService.GetPoisAsync();
+            List<Poi> data = new();
+            bool loadedFromOffline = false;
+            try
+            {
+                data = await _apiService.GetPoisAsync();
+            }
+            catch
+            {
+            }
+
+            if (data == null || !data.Any())
+            {
+                data = await _offlineSyncService.LoadPoisAsync();
+                loadedFromOffline = data.Any();
+            }
+
             if (data != null && data.Any())
             {
                 foreach (var item in data)
@@ -110,6 +144,11 @@ public partial class MainPage : ContentPage
                 }
 
                 StartGpsTimer();
+
+                if (loadedFromOffline && OfflineSyncService.ShouldShowOfflineNotice())
+                {
+                    await DisplayAlert("Thông báo", "Đang dùng dữ liệu offline đã đồng bộ.", "OK");
+                }
             }
             else
             {
@@ -128,6 +167,13 @@ public partial class MainPage : ContentPage
         if (lstPois.ItemsSource is IEnumerable<Poi> pois && pois.Any())
         {
             StartGpsTimer();
+            _ = DrawPendingRouteAsync();
+        }
+
+        if (!_hasRequestedInitialLocation)
+        {
+            _hasRequestedInitialLocation = true;
+            _ = EnsureUserLocationAsync();
         }
     }
 
@@ -160,6 +206,132 @@ public partial class MainPage : ContentPage
         {
             _gpsTimer.Stop();
         }
+    }
+
+    private async Task DrawPendingRouteAsync()
+    {
+        int pendingPoiId = Preferences.Default.Get("PendingRoutePoiId", -1);
+        if (pendingPoiId <= 0 || _allPois == null || !_allPois.Any())
+        {
+            return;
+        }
+
+        var targetPoi = _allPois.FirstOrDefault(p => p.Poiid == pendingPoiId);
+        if (targetPoi == null)
+        {
+            return;
+        }
+
+        Preferences.Default.Remove("PendingRoutePoiId");
+        await DrawRouteToPoiAsync(targetPoi);
+    }
+
+    private async Task DrawRouteToPoiAsync(Poi targetPoi)
+    {
+        bool hasPermission = await CheckAndRequestLocationPermission();
+        if (!hasPermission)
+        {
+            return;
+        }
+
+        var request = new GeolocationRequest(GeolocationAccuracy.High, TimeSpan.FromSeconds(8));
+        var userLocation = await Geolocation.Default.GetLocationAsync(request);
+        if (userLocation == null)
+        {
+            await DisplayAlert("Thông báo", "Không lấy được vị trí hiện tại để vẽ đường đi.", "OK");
+            return;
+        }
+
+        UpdateUserLocationOnMap(userLocation);
+
+        var destination = new Location(targetPoi.Latitude, targetPoi.Longitude);
+        var routePoints = await GetRoadRoutePointsAsync(userLocation, destination);
+        if (routePoints.Count < 2)
+        {
+            await DisplayAlert("Thông báo", "Không lấy được lộ trình theo đường đi. Vui lòng thử lại.", "OK");
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_routePolyline != null)
+            {
+                myMap.MapElements.Remove(_routePolyline);
+            }
+
+            _routePolyline = new Polyline
+            {
+                StrokeColor = Colors.DodgerBlue,
+                StrokeWidth = 7
+            };
+
+            foreach (var point in routePoints)
+            {
+                _routePolyline.Geopath.Add(point);
+            }
+
+            myMap.MapElements.Add(_routePolyline);
+
+            var minLat = routePoints.Min(p => p.Latitude);
+            var maxLat = routePoints.Max(p => p.Latitude);
+            var minLon = routePoints.Min(p => p.Longitude);
+            var maxLon = routePoints.Max(p => p.Longitude);
+
+            var center = new Location((minLat + maxLat) / 2, (minLon + maxLon) / 2);
+
+            var corner1 = new Location(minLat, minLon);
+            var corner2 = new Location(maxLat, maxLon);
+            var diagonalKm = Location.CalculateDistance(corner1, corner2, DistanceUnits.Kilometers);
+            var radiusKm = Math.Max(0.2, (diagonalKm / 2) + 0.1);
+
+
+            myMap.MoveToRegion(MapSpan.FromCenterAndRadius(center, Distance.FromKilometers(radiusKm)));
+        });
+    }
+
+    private async Task<List<Location>> GetRoadRoutePointsAsync(Location origin, Location destination)
+    {
+        var points = new List<Location>();
+
+        try
+        {
+            string originLon = origin.Longitude.ToString(CultureInfo.InvariantCulture);
+            string originLat = origin.Latitude.ToString(CultureInfo.InvariantCulture);
+            string destinationLon = destination.Longitude.ToString(CultureInfo.InvariantCulture);
+            string destinationLat = destination.Latitude.ToString(CultureInfo.InvariantCulture);
+
+            string url = $"https://router.project-osrm.org/route/v1/driving/{originLon},{originLat};{destinationLon},{destinationLat}?overview=full&geometries=geojson";
+
+            var response = await _httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
+            {
+                return points;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var root = JObject.Parse(json);
+            var coordinates = root["routes"]?.FirstOrDefault()?["geometry"]?["coordinates"] as JArray;
+
+            if (coordinates == null)
+            {
+                return points;
+            }
+
+            foreach (var item in coordinates)
+            {
+                if (item is JArray pair && pair.Count >= 2)
+                {
+                    double lon = pair[0]?.Value<double>() ?? 0;
+                    double lat = pair[1]?.Value<double>() ?? 0;
+                    points.Add(new Location(lat, lon));
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return points;
     }
 
     // hàm qr code click 
@@ -228,6 +400,8 @@ public partial class MainPage : ContentPage
                 }
             }
 
+            MarkNearestPoiCircle(nearestPoi);
+
             // 4. Chỉ thuyết minh quán gần nhất trong bán kính trigger
             if (nearestPoi != null
                 && nearestDistanceInMeters <= TriggerDistanceMeters
@@ -270,11 +444,47 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private void MarkNearestPoiCircle(Poi? nearestPoi)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (nearestPoi == null)
+            {
+                if (_nearestPoiCircle != null)
+                {
+                    myMap.MapElements.Remove(_nearestPoiCircle);
+                    _nearestPoiCircle = null;
+                }
+                return;
+            }
+
+            var nearestLocation = new Location(nearestPoi.Latitude, nearestPoi.Longitude);
+
+            if (_nearestPoiCircle == null)
+            {
+                _nearestPoiCircle = new Microsoft.Maui.Controls.Maps.Circle
+                {
+                    Center = nearestLocation,
+                    Radius = Distance.FromKilometers(0.03),
+                    FillColor = Color.FromRgba(255, 0, 0, 80),
+                    StrokeColor = Colors.Red,
+                    StrokeWidth = 3
+                };
+                myMap.MapElements.Add(_nearestPoiCircle);
+            }
+            else
+            {
+                _nearestPoiCircle.Center = nearestLocation;
+            }
+        });
+    }
+
 
     private void UpdateUserLocationOnMap(Location location)
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
+            _lastKnownLocation = location;
             lblCurrentLocation.Text = $"Vị trí hiện tại: {location.Latitude:F6}, {location.Longitude:F6}";
 
             if (_userLocationCircle == null)
@@ -301,6 +511,30 @@ public partial class MainPage : ContentPage
             }
         });
     }
+
+    private async Task EnsureUserLocationAsync()
+    {
+        bool hasPermission = await CheckAndRequestLocationPermission();
+        if (!hasPermission)
+        {
+            return;
+        }
+
+        var lastKnown = await Geolocation.Default.GetLastKnownLocationAsync();
+        if (lastKnown != null)
+        {
+            _hasCenteredUserLocation = false;
+            UpdateUserLocationOnMap(lastKnown);
+        }
+
+        var request = new GeolocationRequest(GeolocationAccuracy.High, TimeSpan.FromSeconds(8));
+        var currentLocation = await Geolocation.Default.GetLocationAsync(request);
+        if (currentLocation != null)
+        {
+            _hasCenteredUserLocation = false;
+            UpdateUserLocationOnMap(currentLocation);
+        }
+    }
     // Hàm xử lý chạm vào quán (bấm 1 lần là ăn)
     private async void OnPoiTapped(object sender, TappedEventArgs e)
     {
@@ -316,15 +550,38 @@ public partial class MainPage : ContentPage
     {
         if (_allPois == null) return;
 
-        var keyword = e.NewTextValue?.ToLower() ?? "";
+        var keyword = NormalizeSearchText(e.NewTextValue);
         if (string.IsNullOrWhiteSpace(keyword))
         {
             lstPois.ItemsSource = _allPois;
         }
         else
         {
-            lstPois.ItemsSource = _allPois.Where(p => p.Name.ToLower().Contains(keyword)).ToList();
+            lstPois.ItemsSource = _allPois
+                .Where(p => NormalizeSearchText(p.Name).Contains(keyword))
+                .ToList();
         }
+    }
+
+    private static string NormalizeSearchText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new System.Text.StringBuilder(normalized.Length);
+        foreach (var ch in normalized)
+        {
+            var category = CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (category != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(ch);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
     }
     private int? ExtractPoiId(string value)
     {

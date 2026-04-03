@@ -7,10 +7,16 @@ public partial class FavoritePage : ContentPage
 {
     // Khai báo lại ApiService giống hệt bên MainPage
     ApiService _apiService = new ApiService();
+    private readonly OfflineSyncService _offlineSyncService;
+    bool _isNavigating;
+    public Command<Poi?> FavoriteTapCommand { get; }
 
     public FavoritePage()
     {
         InitializeComponent();
+        BindingContext = this;
+        _offlineSyncService = new OfflineSyncService(_apiService);
+        FavoriteTapCommand = new Command<Poi?>(async selectedPoi => await NavigateToDetailAsync(selectedPoi));
     }
 
     protected override async void OnAppearing()
@@ -28,22 +34,47 @@ public partial class FavoritePage : ContentPage
             return;
         }
 
-        lblEmpty.IsVisible = false;
-
         try
         {
-            // ==========================================
-            // 2. GỌI LẠI API ĐỂ LẤY TẤT CẢ DANH SÁCH QUÁN
-            // ==========================================
-            var allPois = await _apiService.GetPoisAsync();
+            List<Poi> allPois = new();
+            bool loadedFromOffline = false;
+
+            try
+            {
+                allPois = await _apiService.GetPoisAsync();
+            }
+            catch
+            {
+            }
+
+            if (allPois == null || !allPois.Any())
+            {
+                allPois = await _offlineSyncService.LoadPoisAsync();
+                loadedFromOffline = allPois.Any();
+            }
 
             if (allPois != null && allPois.Any())
             {
-                // 3. Lọc ra những quán có Tên nằm trong danh sách yêu thích
-                var favoritePois = allPois.Where(p => favNames.Contains(p.Name)).ToList();
+                foreach (var item in allPois)
+                {
+                    item.Introduction = item.Poilocalizations?.FirstOrDefault()?.Description
+                                        ?? "Chào mừng bạn đến với " + item.Name;
+                    item.Description = "Địa điểm tham quan hấp dẫn tại Vĩnh Khánh";
+                }
 
-                // 4. Đổ lên màn hình
+                var favoritePois = allPois.Where(p => favNames.Contains(p.Name)).ToList();
                 lstFavorites.ItemsSource = favoritePois;
+                lblEmpty.IsVisible = !favoritePois.Any();
+
+                if (loadedFromOffline && OfflineSyncService.ShouldShowOfflineNotice())
+                {
+                    await DisplayAlert("Thông báo", "Đang dùng dữ liệu offline đã đồng bộ.", "OK");
+                }
+            }
+            else
+            {
+                lstFavorites.ItemsSource = null;
+                lblEmpty.IsVisible = true;
             }
         }
         catch (Exception ex)
@@ -52,12 +83,26 @@ public partial class FavoritePage : ContentPage
         }
     }
 
-    private async void OnFavoriteSelected(object sender, SelectionChangedEventArgs e)
+    private async Task NavigateToDetailAsync(Poi? selectedPoi)
     {
-        if (e.CurrentSelection.FirstOrDefault() is Poi selectedPoi)
+        if (_isNavigating)
+        {
+            return;
+        }
+
+        if (selectedPoi == null)
+        {
+            return;
+        }
+
+        _isNavigating = true;
+        try
         {
             await Navigation.PushAsync(new DetailPage(selectedPoi));
-            ((CollectionView)sender).SelectedItem = null;
+        }
+        finally
+        {
+            _isNavigating = false;
         }
     }
 }

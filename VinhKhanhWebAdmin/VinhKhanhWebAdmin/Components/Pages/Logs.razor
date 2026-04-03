@@ -1,17 +1,349 @@
 ﻿@page "/logs"
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <PageTitle>Nhật ký Audit Logs</PageTitle>
 
 <AuthorizeView>
     <Authorized>
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h3 class="fw-bold text-primary mb-2"><i class="bi bi-list-check me-2"></i>Nhật ký Audit Logs</h3>
-                <p class="text-muted mb-0">Tính năng đang phát triển</p>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="m-0 text-primary fw-bold"><i class="bi bi-list-check me-2"></i>Nhật ký Audit Logs</h2>
+            <button class="btn btn-outline-primary rounded-pill" @onclick="LoadAuditLogsAsync" disabled="@isLoading">
+                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label small text-muted mb-1">Từ ngày</label>
+                        <input type="date" class="form-control" @bind="fromDate" />
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label small text-muted mb-1">Đến ngày</label>
+                        <input type="date" class="form-control" @bind="toDate" />
+                    </div>
+                    <div class="col-lg-3 col-md-4">
+                        <label class="form-label small text-muted mb-1">Người dùng</label>
+                        <select class="form-select" @bind="selectedUserId">
+                            <option value="">Tất cả người dùng</option>
+                            @foreach (var user in users)
+                            {
+                                <option value="@user.UserId">@(string.IsNullOrWhiteSpace(user.FullName) ? user.UserName : $"{user.FullName} ({user.UserName})")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small text-muted mb-1">Từ khóa hành động</label>
+                        <input class="form-control" @bind="keyword" placeholder="VD: login, update, delete..." />
+                    </div>
+                    <div class="col-lg-2 col-md-6 d-flex gap-2">
+                        <button class="btn btn-primary w-100" @onclick="ApplyFiltersAsync" disabled="@isLoading">Lọc</button>
+                        <button class="btn btn-light border" @onclick="ResetFiltersAsync" disabled="@isLoading">Reset</button>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-2">
+                    <button class="btn btn-outline-success btn-sm" @onclick="ExportCsvAsync" disabled="@isLoading">
+                        <i class="bi bi-download me-1"></i>Xuất CSV
+                    </button>
+                </div>
             </div>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Đang tải nhật ký hoạt động...</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+        else
+        {
+            <div class="row g-3 mb-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="small text-muted">Tổng bản ghi</div>
+                            <div class="fs-4 fw-bold text-primary">@auditResult.TotalCount</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="small text-muted">Người dùng hoạt động</div>
+                            <div class="fs-4 fw-bold text-success">@auditResult.Summary.UniqueUsers</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="small text-muted">Hành động phổ biến</div>
+                            <div class="fw-bold text-dark text-truncate">@(!string.IsNullOrWhiteSpace(auditResult.Summary.TopAction) ? auditResult.Summary.TopAction : "-")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="small text-muted">Bản ghi gần nhất</div>
+                            <div class="fw-bold text-info">@(auditResult.Summary.LatestTimestamp?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="8%">ID</th>
+                                    <th width="18%">Thời gian</th>
+                                    <th width="24%">Người dùng</th>
+                                    <th width="40%">Hành động</th>
+                                    <th width="10%">UserID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (auditResult.Items.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Không có bản ghi nào phù hợp.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var log in auditResult.Items)
+                                    {
+                                        <tr>
+                                            <td>#@log.LogId</td>
+                                            <td>@(log.Timestamp?.ToString("dd/MM/yyyy HH:mm:ss") ?? "-")</td>
+                                            <td>@(string.IsNullOrWhiteSpace(log.FullName) ? (log.UserName ?? "Không xác định") : $"{log.FullName} ({log.UserName})")</td>
+                                            <td title="@log.Action">@(string.IsNullOrWhiteSpace(log.Action) ? "-" : log.Action)</td>
+                                            <td>@(log.UserId?.ToString() ?? "-")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="small text-muted">
+                    Trang @auditResult.Page / @auditResult.TotalPages • @auditResult.TotalCount bản ghi
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <select class="form-select form-select-sm" style="width: 90px;" @bind="pageSize" @bind:after="OnPageSizeChangedAsync">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="PrevPageAsync" disabled="@(isLoading || auditResult.Page <= 1)">Trước</button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="NextPageAsync" disabled="@(isLoading || auditResult.Page >= auditResult.TotalPages)">Sau</button>
+                </div>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <div class="alert alert-danger mt-4">Bạn chưa đăng nhập. Vui lòng quay lại trang đăng nhập.</div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private AuditLogPagedResult auditResult = new();
+    private List<AuditUserOption> users = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private int? selectedUserId;
+    private string keyword = string.Empty;
+    private int page = 1;
+    private int pageSize = 20;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<AuditUserOption>>("api/audit-logs/users") ?? new List<AuditUserOption>();
+        }
+        catch
+        {
+            users = new List<AuditUserOption>();
+        }
+    }
+
+    private async Task LoadAuditLogsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var query = BuildQueryString();
+            var result = await Http.GetFromJsonAsync<AuditLogPagedResult>($"api/audit-logs?{query}");
+            auditResult = result ?? new AuditLogPagedResult();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await LocalStorage.RemoveItemAsync("authToken");
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải Audit Logs: {ex.Message}";
+            auditResult = new AuditLogPagedResult();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        page = 1;
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        fromDate = null;
+        toDate = null;
+        selectedUserId = null;
+        keyword = string.Empty;
+        page = 1;
+        pageSize = 20;
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (page <= 1)
+        {
+            return;
+        }
+
+        page--;
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (page >= auditResult.TotalPages)
+        {
+            return;
+        }
+
+        page++;
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task OnPageSizeChangedAsync()
+    {
+        page = 1;
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        try
+        {
+            var query = BuildQueryString(includePaging: false);
+            var bytes = await Http.GetByteArrayAsync($"api/audit-logs/export-csv?{query}");
+            var base64 = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("open", $"data:text/csv;base64,{base64}", "_blank");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể xuất CSV: {ex.Message}";
+        }
+    }
+
+    private string BuildQueryString(bool includePaging = true)
+    {
+        var query = new List<string>();
+
+        if (fromDate.HasValue)
+        {
+            query.Add($"from={fromDate.Value:yyyy-MM-dd}");
+        }
+
+        if (toDate.HasValue)
+        {
+            query.Add($"to={toDate.Value:yyyy-MM-dd}");
+        }
+
+        if (selectedUserId.HasValue)
+        {
+            query.Add($"userId={selectedUserId.Value}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            query.Add($"keyword={Uri.EscapeDataString(keyword)}");
+        }
+
+        if (includePaging)
+        {
+            query.Add($"page={page}");
+            query.Add($"pageSize={pageSize}");
+        }
+
+        return string.Join("&", query);
+    }
+
+    public class AuditLogPagedResult
+    {
+        public int TotalCount { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        public int TotalPages { get; set; } = 1;
+        public List<AuditLogItem> Items { get; set; } = new();
+        public AuditLogSummary Summary { get; set; } = new();
+    }
+
+    public class AuditLogItem
+    {
+        public int LogId { get; set; }
+        public int? UserId { get; set; }
+        public string? UserName { get; set; }
+        public string? FullName { get; set; }
+        public string? Action { get; set; }
+        public DateTime? Timestamp { get; set; }
+    }
+
+    public class AuditLogSummary
+    {
+        public int UniqueUsers { get; set; }
+        public string? TopAction { get; set; }
+        public DateTime? LatestTimestamp { get; set; }
+    }
+
+    public class AuditUserOption
+    {
+        public int UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string? FullName { get; set; }
+    }
+}

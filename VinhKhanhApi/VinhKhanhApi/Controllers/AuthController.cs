@@ -26,8 +26,8 @@ namespace VinhKhanhApi.Controllers
             public string Password { get; set; }
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        [HttpPost("login-admin")]
+        public async Task<IActionResult> LoginAdmin([FromBody] LoginRequest request)
         {
             // 1. Chui xuống Database, tìm user có Username và Password khớp với người dùng nhập
             // (Hiện tại mình check text trần vì trong SQL bạn đang lưu '123456', sau này mình sẽ mã hóa sau cho chuẩn Enterprise)
@@ -40,8 +40,13 @@ namespace VinhKhanhApi.Controllers
                 return Unauthorized("Sai tài khoản hoặc mật khẩu");
             }
 
-            // 3. Nếu tìm thấy, xem RoleID của họ là gì (1 là Admin, 2 là Owner)
-            string roleName = user.RoleId == 1 ? "Admin" : "Owner";
+            if (user.RoleId != 1)
+            {
+                return Unauthorized("Tài khoản không có quyền truy cập");
+            }
+
+            // 3. Nếu tìm thấy, xem RoleID của họ là gì (1)
+            string roleName = "Admin";
 
             // 4. Phát Token
             var token = GenerateJwtToken(user.UserName, roleName, user.UserId);
@@ -51,6 +56,35 @@ namespace VinhKhanhApi.Controllers
                 Token = token,
                 Role = roleName,
                 FullName = user.FullName, // Trả về thêm tên thật để mốt hiển thị lên góc màn hình Web
+                Message = "Đăng nhập thành công"
+            });
+        }
+
+        [HttpPost("login-app")]
+        public async Task<IActionResult> LoginApp([FromBody] LoginRequest request)
+        {
+            var user = await _context.AdminUsers
+                .FirstOrDefaultAsync(u => u.UserName == request.Username && u.PasswordHash == request.Password);
+
+            if (user == null)
+            {
+                return Unauthorized("Sai tài khoản hoặc mật khẩu");
+            }
+
+            if (user.RoleId != 2 && user.RoleId != 3)
+            {
+                return Unauthorized("Tài khoản không có quyền truy cập");
+            }
+
+            string roleName = user.RoleId == 2 ? "Role2" : "Role3";
+
+            var token = GenerateJwtToken(user.UserName, roleName, user.UserId);
+
+            return Ok(new
+            {
+                Token = token,
+                Role = roleName,
+                FullName = user.FullName,
                 Message = "Đăng nhập thành công"
             });
         }

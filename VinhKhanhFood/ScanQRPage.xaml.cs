@@ -10,12 +10,14 @@ namespace VinhKhanhFood;
 public partial class ScanQRPage : ContentPage
 {
     private readonly ApiService _apiService = new ApiService();
+    private readonly OfflineSyncService _offlineSyncService;
     private List<Poi> _pois = new();
     private bool _isHandlingScan;
 
     public ScanQRPage()
     {
         InitializeComponent();
+        _offlineSyncService = new OfflineSyncService(_apiService);
     }
 
     protected override async void OnAppearing()
@@ -28,7 +30,14 @@ public partial class ScanQRPage : ContentPage
 
         if (_pois.Count == 0)
         {
-            _pois = await _apiService.GetPoisAsync() ?? new List<Poi>();
+            try
+            {
+                _pois = await _apiService.GetPoisAsync() ?? new List<Poi>();
+            }
+            catch
+            {
+                _pois = await _offlineSyncService.LoadPoisAsync();
+            }
         }
     }
 
@@ -78,7 +87,14 @@ public partial class ScanQRPage : ContentPage
             {
                 if (_pois.Count == 0)
                 {
-                    _pois = await _apiService.GetPoisAsync() ?? new List<Poi>();
+                    try
+                    {
+                        _pois = await _apiService.GetPoisAsync() ?? new List<Poi>();
+                    }
+                    catch
+                    {
+                        _pois = await _offlineSyncService.LoadPoisAsync();
+                    }
                 }
 
                 var poiId = ExtractPoiId(rawValue);
@@ -94,7 +110,7 @@ public partial class ScanQRPage : ContentPage
                     return;
                 }
 
-                await Shell.Current.Navigation.PushAsync(new DetailPage(targetPoi));
+                await Shell.Current.Navigation.PushAsync(new DetailPage(targetPoi, true));
             }
             catch (Exception ex)
             {

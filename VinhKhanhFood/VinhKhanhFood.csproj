@@ -20,6 +20,8 @@
 		<SingleProject>true</SingleProject>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<CheckEolTargetFramework>false</CheckEolTargetFramework>
+		<CheckEolWorkloads>false</CheckEolWorkloads>
 
 		<!-- Display name -->
 		<ApplicationTitle>VinhKhanhFood</ApplicationTitle>
@@ -44,7 +46,7 @@
 		<MauiIcon Include="Resources\AppIcon\my_logo.png" Color="#FFF2CC" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\my_logo.png" Color="#FFF2CC" BaseSize="256,256" />
+		<MauiSplashScreen Include="Resources\Splash\dinhcuong.png" Color="#FFF2CC" BaseSize="256,256" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -64,8 +66,8 @@
 
 		<PackageReference Include="CommunityToolkit.Maui.Maps" Version="2.0.2" />
 
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+     <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.100" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.4.0" />
@@ -76,6 +78,9 @@
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="FavoritePage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="LoginPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="ScanQRPage.xaml">

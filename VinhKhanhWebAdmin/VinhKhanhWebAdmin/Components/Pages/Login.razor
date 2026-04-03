@@ -179,7 +179,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/Auth/login", loginModel);
+            var response = await Http.PostAsJsonAsync("api/Auth/login-admin", loginModel);
 
             if (response.IsSuccessStatusCode)
             {
@@ -215,7 +215,10 @@
             }
             else
             {
-                errorMessage = "Sai tài khoản hoặc mật khẩu!";
+                var errorDetail = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(errorDetail)
+                    ? "Sai tài khoản hoặc mật khẩu!"
+                    : errorDetail;
             }
         }
         catch (HttpRequestException)

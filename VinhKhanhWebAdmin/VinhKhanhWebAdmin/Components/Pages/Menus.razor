@@ -1,17 +1,119 @@
 ﻿@page "/menus"
+@inject HttpClient Http
 
 <PageTitle>Quản lý Menu</PageTitle>
 
 <AuthorizeView>
     <Authorized>
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h3 class="fw-bold text-primary mb-2"><i class="bi bi-journal-text me-2"></i>Quản lý Menu</h3>
-                <p class="text-muted mb-0">Tính năng đang phát triển.</p>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="m-0 text-primary fw-bold"><i class="bi bi-journal-text me-2"></i>Quản lý Menu</h2>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Đang tải danh sách món ăn...</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+        else
+        {
+            <div class="table-responsive shadow-sm rounded border-0">
+                <table class="table table-hover align-middle bg-white m-0 w-100">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th width="8%">ID</th>
+                            <th width="12%">Ảnh</th>
+                            <th width="35%" class="text-start">Tên món</th>
+                            <th width="15%">Giá</th>
+                            <th width="30%" class="text-start">Quán</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        @if (menus.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-muted py-4">Chưa có món ăn nào trong bảng Menu.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var menu in menus)
+                            {
+                                <tr>
+                                    <td><span class="text-muted small">#@menu.MenuId</span></td>
+                                    <td>
+                                        <img src="@(string.IsNullOrWhiteSpace(menu.Image) ? "img/no-image.png" : menu.Image)"
+                                             class="rounded shadow-sm" style="width: 50px; height: 50px; object-fit: cover;" />
+                                    </td>
+                                    <td class="text-start">
+                                        <div class="fw-bold text-primary">@menu.FoodName</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            @(menu.Price.HasValue ? string.Format("{0:N0}đ", menu.Price.Value) : "Chưa cập nhật")
+                                        </span>
+                                    </td>
+                                    <td class="text-start">
+                                        @(!string.IsNullOrWhiteSpace(menu.PoiName) ? menu.PoiName : "Không xác định")
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <div class="alert alert-danger mt-4">Bạn chưa đăng nhập. Vui lòng quay lại trang đăng nhập.</div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private readonly List<MenuItem> menus = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMenus();
+    }
+
+    private async Task LoadMenus()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var data = await Http.GetFromJsonAsync<List<MenuItem>>("api/menu");
+            menus.Clear();
+            if (data is not null)
+            {
+                menus.AddRange(data);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải danh sách menu: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class MenuItem
+    {
+        public int MenuId { get; set; }
+        public string FoodName { get; set; } = string.Empty;
+        public decimal? Price { get; set; }
+        public string? Image { get; set; }
+        public string? PoiName { get; set; }
+    }
+}

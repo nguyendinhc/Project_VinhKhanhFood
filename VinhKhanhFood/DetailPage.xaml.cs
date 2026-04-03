@@ -1,13 +1,18 @@
-﻿using VinhKhanhFood.Models;
+﻿using System.Collections.Generic;
+using System.Linq;
+using VinhKhanhFood.Models;
+using VinhKhanhFood.Services;
 
 namespace VinhKhanhFood;
 
 public partial class DetailPage : ContentPage
 {
     private Poi _poi;
+    private readonly ApiService _apiService = new ApiService();
+    private bool _isLoadingDetail;
 
     // Sửa constructor để nhận đối tượng Poi
-    public DetailPage(Poi poi)
+    public DetailPage(Poi poi, bool autoSpeakOnAppear = false)
     {
         InitializeComponent();
         _poi = poi;
@@ -15,9 +20,65 @@ public partial class DetailPage : ContentPage
 
         //  Vừa mở trang lên là kiểm tra xem quán này đã thả tim chưa
         CheckFavoriteStatus();
+
+        if (autoSpeakOnAppear)
+        {
+            Dispatcher.Dispatch(async () => await SpeakPoiAsync());
+        }
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (_isLoadingDetail || _poi == null)
+        {
+            return;
+        }
+
+        if (_poi.Menus != null && _poi.Menus.Any())
+        {
+            return;
+        }
+
+        _isLoadingDetail = true;
+        try
+        {
+            var detailPoi = await _apiService.GetPoiByIdAsync(_poi.Poiid);
+            if (detailPoi == null)
+            {
+                return;
+            }
+
+            detailPoi.Introduction = detailPoi.Poilocalizations?.FirstOrDefault()?.Description
+                                     ?? _poi.Introduction
+                                     ?? "Chào mừng bạn đến với " + detailPoi.Name;
+            detailPoi.Description = _poi.Description ?? "Địa điểm tham quan hấp dẫn tại Vĩnh Khánh";
+
+            if (detailPoi.Menus == null || !detailPoi.Menus.Any())
+            {
+                detailPoi.Menus = _poi.Menus ?? new List<Menu>();
+            }
+
+            _poi = detailPoi;
+            BindingContext = _poi;
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Lỗi", "Không thể tải chi tiết địa điểm: " + ex.Message, "OK");
+        }
+        finally
+        {
+            _isLoadingDetail = false;
+        }
     }
 
     private async void OnSpeakClicked(object sender, EventArgs e)
+    {
+        await SpeakPoiAsync();
+    }
+
+    private async Task SpeakPoiAsync()
     {
         try
         {
@@ -67,30 +128,14 @@ public partial class DetailPage : ContentPage
             await DisplayAlert("Lỗi", "Không thể phát thuyết minh: " + ex.Message, "OK");
         }
     }
+
     private async void OnNavigateClicked(object sender, EventArgs e)
     {
         var poi = BindingContext as Poi;
         if (poi != null)
         {
-            // Tạo tọa độ của quán
-            var location = new Location(poi.Latitude, poi.Longitude);
-
-            // Cấu hình mở Google Maps ở chế độ dẫn đường (Driving/Walking)
-            var options = new MapLaunchOptions
-            {
-                Name = poi.Name,
-                NavigationMode = NavigationMode.Driving
-            };
-
-            try
-            {
-                // Lệnh này sẽ tự động gọi App Bản đồ của điện thoại
-                await Map.Default.OpenAsync(location, options);
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Lỗi", "Điện thoại của bạn chưa cài ứng dụng bản đồ!", "OK");
-            }
+            Preferences.Default.Set("PendingRoutePoiId", poi.Poiid);
+            await Shell.Current.GoToAsync("//main");
         }
     }
 

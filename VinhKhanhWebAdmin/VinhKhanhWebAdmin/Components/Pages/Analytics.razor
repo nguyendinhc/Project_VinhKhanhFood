@@ -1,17 +1,305 @@
 ﻿@page "/analytics"
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <PageTitle>Thống kê số liệu</PageTitle>
 
 <AuthorizeView>
     <Authorized>
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h3 class="fw-bold text-primary mb-2"><i class="bi bi-graph-up-arrow me-2"></i>Thống kê số liệu</h3>
-                <p class="text-muted mb-0">Tính năng đang phát triển.</p>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="m-0 text-primary fw-bold"><i class="bi bi-graph-up-arrow me-2"></i>Thống kê số liệu</h2>
+            <button class="btn btn-outline-primary rounded-pill" @onclick="LoadDashboardAsync" disabled="@isLoading">
+                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+            </button>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Đang tải dữ liệu thống kê...</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+        else if (dashboard is null)
+        {
+            <div class="alert alert-warning mt-3">Không có dữ liệu thống kê.</div>
+        }
+        else
+        {
+            <div class="row g-3 mb-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Tổng số quán</div>
+                            <div class="fs-3 fw-bold text-primary">@dashboard.TotalPois</div>
+                            <div class="small text-muted">@dashboard.ActivePois hoạt động • @dashboard.PendingPois chờ duyệt • @dashboard.InactivePois tạm ẩn</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Tổng số món ăn</div>
+                            <div class="fs-3 fw-bold text-success">@dashboard.TotalMenus</div>
+                            <div class="small text-muted">Toàn hệ thống Menu</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Tổng lượt tương tác</div>
+                            <div class="fs-3 fw-bold text-info">@dashboard.TotalVisits</div>
+                            @* <div class="small text-muted">Từ bảng VisitLog</div> *@
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Yêu cầu chờ duyệt</div>
+                            <div class="fs-3 fw-bold text-warning">@dashboard.PendingSubmissions</div>
+                           @*  <div class="small text-muted">Từ bảng PoiSubmission</div> *@
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 pt-3 px-3">
+                            <h5 class="mb-0 text-primary">Lượt ghé thăm 7 ngày gần nhất</h5>
+                        </div>
+                        <div class="card-body px-3">
+                            @if (dashboard.VisitsTrend.Count == 0)
+                            {
+                                <div class="text-muted">Chưa có dữ liệu VisitLog.</div>
+                            }
+                            else
+                            {
+                                var maxVisits = Math.Max(1, dashboard.VisitsTrend.Max(x => x.TotalVisits));
+                                @foreach (var item in dashboard.VisitsTrend)
+                                {
+                                    var width = item.TotalVisits == 0 ? 0 : (int)Math.Round(item.TotalVisits * 100.0 / maxVisits);
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between small">
+                                            <span>@item.Date.ToString("dd/MM")</span>
+                                            <span class="fw-semibold">@item.TotalVisits lượt</span>
+                                        </div>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-info" style="width:@width%"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 pt-3 px-3">
+                            <h5 class="mb-0 text-primary">Tỉ lệ hỗ trợ audio</h5>
+                        </div>
+                        <div class="card-body px-3">
+                            @{
+                                var hasPois = dashboard.TotalPois > 0;
+                                var localizedRatio = hasPois ? (int)Math.Round(dashboard.LocalizedPois * 100.0 / dashboard.TotalPois) : 0;
+                                localizedRatio = Math.Clamp(localizedRatio, 0, 100);
+                            }
+                            <div class="mb-2 small text-muted">Đã có thuyết minh: @dashboard.LocalizedPois / @dashboard.TotalPois quán</div>
+                            <div class="progress" style="height:18px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width:@($"{localizedRatio}%")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@localizedRatio">
+                                    @localizedRatio%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 pt-3 px-3">
+                            <h5 class="mb-0 text-primary">Top 5 quán hot nhất</h5>
+                        </div>
+                        <div class="card-body px-3">
+                            @if (dashboard.TopPois.Count == 0)
+                            {
+                                <div class="text-muted">Chưa có dữ liệu.</div>
+                            }
+                            else
+                            {
+                                var maxTop = Math.Max(1, dashboard.TopPois.Max(x => x.TotalVisits));
+                                @foreach (var poi in dashboard.TopPois)
+                                {
+                                    var width = (int)Math.Round(poi.TotalVisits * 100.0 / maxTop);
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between small">
+                                            <span class="text-truncate me-2">@poi.PoiName</span>
+                                            <span class="fw-semibold">@poi.TotalVisits</span>
+                                        </div>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-primary" style="width:@width%"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 pt-3 px-3">
+                            <h5 class="mb-0 text-primary">Cảnh báo dữ liệu cần xử lý</h5>
+                        </div>
+                        <div class="card-body px-3">
+                            <div class="mb-2">
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">Thiếu menu</span>
+                                <span class="fw-semibold">@dashboard.PoisWithoutMenus quán</span>
+                            </div>
+                            <div class="mb-3">
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle me-2">Thiếu thumbnail</span>
+                                <span class="fw-semibold">@dashboard.PoisWithoutThumbnail quán</span>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Quán</th>
+                                            <th>Menu</th>
+                                            <th>Ảnh</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (dashboard.WeakPois.Count == 0)
+                                        {
+                                            <tr>
+                                                <td colspan="3" class="text-muted">Không có cảnh báo.</td>
+                                            </tr>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var poi in dashboard.WeakPois)
+                                            {
+                                                <tr>
+                                                    <td class="text-truncate" style="max-width: 200px;">@poi.PoiName</td>
+                                                    <td>
+                                                        @if (poi.HasMenu)
+                                                        {
+                                                            <span class="badge bg-success-subtle text-success">Đủ</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger-subtle text-danger">Thiếu</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (poi.HasThumbnail)
+                                                        {
+                                                            <span class="badge bg-success-subtle text-success">Đủ</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning-subtle text-warning">Thiếu</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        }
     </Authorized>
     <NotAuthorized>
         <div class="alert alert-danger mt-4">Bạn chưa đăng nhập. Vui lòng quay lại trang đăng nhập.</div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private AnalyticsDashboard? dashboard;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardAsync();
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            dashboard = await Http.GetFromJsonAsync<AnalyticsDashboard>("api/analytics/dashboard");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await LocalStorage.RemoveItemAsync("authToken");
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải dữ liệu thống kê: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class AnalyticsDashboard
+    {
+        public int TotalPois { get; set; }
+        public int ActivePois { get; set; }
+        public int PendingPois { get; set; }
+        public int InactivePois { get; set; }
+        public int TotalMenus { get; set; }
+        public int TotalVisits { get; set; }
+        public int PendingSubmissions { get; set; }
+        public int LocalizedPois { get; set; }
+        public int PoisWithoutMenus { get; set; }
+        public int PoisWithoutThumbnail { get; set; }
+        public List<VisitsTrendItem> VisitsTrend { get; set; } = new();
+        public List<TopPoiItem> TopPois { get; set; } = new();
+        public List<DataQualityPoiItem> WeakPois { get; set; } = new();
+    }
+
+    public class VisitsTrendItem
+    {
+        public DateTime Date { get; set; }
+        public int TotalVisits { get; set; }
+    }
+
+    public class TopPoiItem
+    {
+        public int PoiId { get; set; }
+        public string PoiName { get; set; } = string.Empty;
+        public int TotalVisits { get; set; }
+    }
+
+    public class DataQualityPoiItem
+    {
+        public int PoiId { get; set; }
+        public string PoiName { get; set; } = string.Empty;
+        public bool HasMenu { get; set; }
+        public bool HasThumbnail { get; set; }
+    }
+
+}
