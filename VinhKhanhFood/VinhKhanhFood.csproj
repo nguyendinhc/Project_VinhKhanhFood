@@ -46,7 +46,7 @@
 		<MauiIcon Include="Resources\AppIcon\my_logo.png" Color="#FFF2CC" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\dinhcuong.png" Color="#FFF2CC" BaseSize="256,256" />
+		<MauiSplashScreen Include="Resources\Splash\my_logo.png" Color="#FFF2CC" BaseSize="256,256" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
