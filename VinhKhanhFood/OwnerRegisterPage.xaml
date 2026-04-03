@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VinhKhanhFood.OwnerRegisterPage"
+             Title="Dang ky Chu quan"
+             BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <VerticalStackLayout Spacing="0">
+            <Grid HeightRequest="170">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FFEDD5" Offset="0" />
+                        <GradientStop Color="#FED7AA" Offset="1" />
+                    </LinearGradientBrush>
+                </Grid.Background>
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="4">
+                    <Label Text="DANG KY CHU QUAN" FontAttributes="Bold" FontSize="22" TextColor="#9A3412" HorizontalOptions="Center" />
+                    <Label Text="Gui thong tin de Admin xet duyet" FontSize="12" TextColor="#C2410C" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <Frame CornerRadius="24"
+                   Padding="20"
+                   Margin="20,-24,20,20"
+                   BackgroundColor="White"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Thong tin tai khoan" FontAttributes="Bold" FontSize="17" TextColor="#0F172A" />
+
+                    <Entry x:Name="entryUserName" Placeholder="Ten dang nhap" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Entry x:Name="entryPassword" Placeholder="Mat khau" IsPassword="True" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Entry x:Name="entryConfirmPassword" Placeholder="Nhap lai mat khau" IsPassword="True" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+
+                    <Label Text="Thong tin lien he" FontAttributes="Bold" FontSize="17" TextColor="#0F172A" Margin="0,8,0,0" />
+                    <Entry x:Name="entryFullName" Placeholder="Ho va ten" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Entry x:Name="entryEmail" Placeholder="Email" Keyboard="Email" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+
+                    <Label x:Name="lblError" IsVisible="False" TextColor="#DC2626" FontAttributes="Bold" FontSize="12" HorizontalOptions="Center" />
+
+                    <Button x:Name="btnSubmit"
+                            Text="GUI DANG KY"
+                            BackgroundColor="#EA580C"
+                            TextColor="White"
+                            CornerRadius="14"
+                            HeightRequest="48"
+                            Clicked="OnSubmitClicked" />
+
+                    <ActivityIndicator x:Name="loadingIndicator" IsVisible="False" IsRunning="False" Color="#EA580C" HeightRequest="24" />
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

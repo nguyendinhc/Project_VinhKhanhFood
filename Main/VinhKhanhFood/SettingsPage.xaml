@@ -1,0 +1,76 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VinhKhanhFood.SettingsPage"
+             Title="Cài ??t"
+             BackgroundColor="#F5F7F8">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <Frame x:Name="accountCard" IsVisible="False" CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Grid.Column="0" Spacing="6">
+                        <Label Text="Tài kho?n ?ang ??ng nh?p" FontSize="14" FontAttributes="Bold" TextColor="Black" />
+                        <Label x:Name="lblLoggedInUser" Text="Ch?a ??ng nh?p" FontSize="16" FontAttributes="Bold" TextColor="#FF5722" />
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="1" Text="??ng xu?t" BackgroundColor="#DC2626" TextColor="White" FontAttributes="Bold" CornerRadius="18" HeightRequest="40" Clicked="OnLogoutClicked" />
+                </Grid>
+            </Frame>
+
+            <Label Text="Tùy ch?nh ?ng d?ng" FontSize="22" FontAttributes="Bold" TextColor="#FF5722" />
+
+            <Frame x:Name="accountCard" IsVisible="False" CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="?? Ngôn ng? thuy?t minh" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                    <Label Text="Ch?n ngôn ng? ?? máy ??c gi?i thi?u quán" FontSize="12" TextColor="Gray" />
+
+                    <Picker x:Name="pckLanguage" Title="Ch?n ngôn ng? thuy?t minh" SelectedIndexChanged="OnLanguageChanged" TextColor="Black">
+                        <Picker.ItemsSource>
+                            <x:Array Type="{x:Type x:String}">
+                                <x:String>???? Ti?ng Vi?t</x:String>
+                                <x:String>???? English</x:String>
+                                <x:String>???? ??? (Ti?ng Hàn)</x:String>
+                                <x:String>???? ?? (Ti?ng Trung)</x:String>
+                                <x:String>???? ??? (Ti?ng Nh?t)</x:String>
+                            </x:Array>
+                        </Picker.ItemsSource>
+                    </Picker>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <Grid ColumnDefinitions="*, Auto">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="?? T? ??ng thuy?t minh (GPS)" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                        <Label Text="T? phát loa khi ??n g?n quán (50m)" FontSize="12" TextColor="Gray" />
+                    </VerticalStackLayout>
+
+                    <Switch x:Name="swAutoPlay" Grid.Column="1" Toggled="OnAutoPlayToggled" ThumbColor="#FF5722" OnColor="#FFCCBC" />
+                </Grid>
+            </Frame>
+
+            <Frame CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="?? ??ng b? d? li?u offline" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                    <Label x:Name="lblOfflineSyncStatus" Text="Ch?a ??ng b?" FontSize="12" TextColor="Gray" />
+                    <Button x:Name="btnOfflineSync" Text="??ng b? ngay" BackgroundColor="#1E90FF" TextColor="White" FontAttributes="Bold" CornerRadius="12" HeightRequest="45" Clicked="OnOfflineSyncClicked" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="?? Khu v?c Ch? quán" FontSize="16" FontAttributes="Bold" TextColor="Black" />
+                    <Label Text="??ng ký ?? g?i yêu c?u tr? thành ch? quán. Sau khi ???c duy?t, b?n có th? ??ng nh?p qu?n lý." FontSize="12" TextColor="Gray" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0" Text="??ng nh?p" BackgroundColor="#EA580C" TextColor="White" FontAttributes="Bold" CornerRadius="12" HeightRequest="44" Clicked="OnOwnerLoginClicked" />
+                        <Button Grid.Column="1" Text="??ng ký" BackgroundColor="#F97316" TextColor="White" FontAttributes="Bold" CornerRadius="12" HeightRequest="44" Clicked="OnOwnerRegisterClicked" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="L?u Cài ??t" BackgroundColor="#FF5722" TextColor="White" FontAttributes="Bold" CornerRadius="25" HeightRequest="50" Margin="0,20,0,0" Clicked="OnSaveSettingsClicked" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -8,7 +8,7 @@ namespace VinhKhanhFood.Services
     {
         // QUAN TRỌNG: Thay IP của máy tính bạn vào đây (Ví dụ: 192.168.1.5)
         // Số 7044 là Port của Web API (xem lại trên trình duyệt khi chạy API)
-        private const string BaseUrl = "http://192.168.1.99:5100/api/";
+        private const string BaseUrl = "http://10.24.174.26:5100/api/";
         private readonly HttpClient _httpClient;
 
         public ApiService()
@@ -64,6 +64,30 @@ namespace VinhKhanhFood.Services
 
             var resultJson = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<LoginResult>(resultJson);
+        }
+
+        public async Task RegisterOwnerRequestAsync(string username, string password, string? fullName, string? email)
+        {
+            var payload = new
+            {
+                UserName = username,
+                Password = password,
+                FullName = fullName,
+                Email = email,
+                RoleId = (int?)null
+            };
+
+            var json = JsonConvert.SerializeObject(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(BaseUrl + "users", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
+                    ? "Không thể gửi đăng ký chủ quán."
+                    : error);
+            }
         }
     }
 }

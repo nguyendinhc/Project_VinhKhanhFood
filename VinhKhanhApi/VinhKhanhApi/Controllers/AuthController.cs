@@ -89,6 +89,35 @@ namespace VinhKhanhApi.Controllers
             });
         }
 
+        [HttpPost("login-web")]
+        public async Task<IActionResult> LoginWeb([FromBody] LoginRequest request)
+        {
+            var user = await _context.AdminUsers
+                .FirstOrDefaultAsync(u => u.UserName == request.Username && u.PasswordHash == request.Password);
+
+            if (user == null)
+            {
+                return Unauthorized("Sai tài khoản hoặc mật khẩu");
+            }
+
+            if (user.RoleId != 1 && user.RoleId != 2)
+            {
+                return Unauthorized("Tài khoản không có quyền truy cập web");
+            }
+
+            string roleName = user.RoleId == 1 ? "Admin" : "Owner";
+
+            var token = GenerateJwtToken(user.UserName, roleName, user.UserId);
+
+            return Ok(new
+            {
+                Token = token,
+                Role = roleName,
+                FullName = user.FullName,
+                Message = "Đăng nhập thành công"
+            });
+        }
+
         // Hàm tạo Token (Giữ nguyên như cũ)
         private string GenerateJwtToken(string username, string role, int userId)
         {

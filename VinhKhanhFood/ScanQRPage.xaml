@@ -6,10 +6,7 @@
              Title="Quét Mã QR"
              BackgroundColor="Black">
     <Grid>
-        <zxing:CameraBarcodeReaderView x:Name="barcodeReader"
-                                       BarcodesDetected="OnBarcodesDetected"
-                                       IsDetecting="True"
-                                       CameraLocation="Rear" />
+        <Grid x:Name="cameraHost" />
 
         <Grid>
             <Grid.RowDefinitions>

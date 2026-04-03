@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using VinhKhanhApi.Models;
@@ -7,9 +8,11 @@ namespace VinhKhanhApi.Controllers
 {
     [Route("api/users")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
         private const int AdminRoleId = 1;
+        private const string OwnerRoleName = "Owner";
         private readonly VinhKhanhAudioGuideContext _context;
 
         public UsersController(VinhKhanhAudioGuideContext context)
@@ -65,7 +68,9 @@ namespace VinhKhanhApi.Controllers
                 TotalUsers = totalCount,
                 AdminCount = roleStats.Where(x => string.Equals(x.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)).Sum(x => x.Count),
                 OwnerCount = roleStats.Where(x => string.Equals(x.RoleName, "Owner", StringComparison.OrdinalIgnoreCase)).Sum(x => x.Count),
-                OtherRoleCount = roleStats.Where(x => !string.Equals(x.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)
+                PendingOwnerCount = roleStats.Where(x => x.RoleName == null).Sum(x => x.Count),
+                OtherRoleCount = roleStats.Where(x => x.RoleName != null
+                                                    && !string.Equals(x.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)
                                                     && !string.Equals(x.RoleName, "Owner", StringComparison.OrdinalIgnoreCase))
                                          .Sum(x => x.Count)
             };
@@ -256,6 +261,57 @@ namespace VinhKhanhApi.Controllers
             return NoContent();
         }
 
+        [HttpPut("{id:int}/approve-owner")]
+        public async Task<IActionResult> ApproveOwnerAsync(int id)
+        {
+            var user = await _context.AdminUsers.FirstOrDefaultAsync(u => u.UserId == id);
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy user.");
+            }
+
+            if (user.RoleId.HasValue)
+            {
+                return BadRequest("Chỉ duyệt tài khoản đang chờ duyệt chủ quán.");
+            }
+
+            var ownerRole = await _context.Roles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RoleName != null && r.RoleName.ToLower() == OwnerRoleName.ToLower());
+
+            if (ownerRole == null)
+            {
+                return BadRequest("Không tìm thấy role Owner.");
+            }
+
+            user.RoleId = ownerRole.RoleId;
+            await _context.SaveChangesAsync();
+            await AddAuditLogAsync($"Approve owner registration for user #{user.UserId} ({user.UserName})");
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id:int}/reject-owner")]
+        public async Task<IActionResult> RejectOwnerAsync(int id)
+        {
+            var user = await _context.AdminUsers.FirstOrDefaultAsync(u => u.UserId == id);
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy user.");
+            }
+
+            if (user.RoleId.HasValue)
+            {
+                return BadRequest("Chỉ từ chối tài khoản đang chờ duyệt chủ quán.");
+            }
+
+            _context.AdminUsers.Remove(user);
+            await _context.SaveChangesAsync();
+            await AddAuditLogAsync($"Reject owner registration for user #{user.UserId} ({user.UserName})");
+
+            return NoContent();
+        }
+
         private IQueryable<AdminUser> BuildFilteredQuery(string? keyword, int? roleId)
         {
             var query = _context.AdminUsers
@@ -315,6 +371,7 @@ namespace VinhKhanhApi.Controllers
             public int TotalUsers { get; set; }
             public int AdminCount { get; set; }
             public int OwnerCount { get; set; }
+            public int PendingOwnerCount { get; set; }
             public int OtherRoleCount { get; set; }
         }
 
