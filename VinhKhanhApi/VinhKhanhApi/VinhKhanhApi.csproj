@@ -26,4 +26,13 @@
     <Folder Include="wwwroot\img\menu\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\Main\VinhKhanhApi\VinhKhanhApi\Models\UserFavorite.cs">
+      <Link>Models\UserFavorite.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Main\VinhKhanhApi\VinhKhanhApi\Models\UserPreference.cs">
+      <Link>Models\UserPreference.cs</Link>
+    </Compile>
+  </ItemGroup>
+
 </Project>

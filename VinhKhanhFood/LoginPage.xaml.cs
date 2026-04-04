@@ -43,6 +43,9 @@ public partial class LoginPage : ContentPage
             Preferences.Default.Set("UserRole", result.Role ?? string.Empty);
             Preferences.Default.Set("DisplayName", result.FullName ?? username);
 
+            var welcomeName = string.IsNullOrWhiteSpace(result.FullName) ? username : result.FullName;
+            Preferences.Default.Set("PendingWelcomeMessage", $"Chào mừng {welcomeName}!");
+
             Application.Current!.MainPage = new AppShell();
         }
         catch (Exception ex)

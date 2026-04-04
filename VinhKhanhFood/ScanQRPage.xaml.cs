@@ -110,7 +110,7 @@ public partial class ScanQRPage : ContentPage
         return true;
     }
 
-    private void OnBarcodesDetected(object sender, BarcodeDetectionEventArgs e)
+    private void OnBarcodesDetected(object? sender, BarcodeDetectionEventArgs e)
     {
         if (_isHandlingScan)
         {

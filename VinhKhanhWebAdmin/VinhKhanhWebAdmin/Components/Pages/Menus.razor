@@ -24,47 +24,54 @@
 
         @if (showForm)
         {
-            <div class="card border-0 shadow-sm rounded-4 mb-3">
-                <div class="card-body">
-                    <h5 class="fw-bold mb-3">@(isEditMode ? "Cập nhật món" : "Thêm món mới")</h5>
-                    @if (!string.IsNullOrWhiteSpace(formError))
-                    {
-                        <div class="alert alert-danger">@formError</div>
-                    }
-                    <div class="row g-3">
-                        <div class="col-lg-4">
-                            <label class="form-label small text-muted">Quán</label>
-                            <select class="form-select" @bind="menuForm.Poiid" disabled="@(!ownerPois.Any())">
-                                <option value="">-- Chọn quán --</option>
-                                @foreach (var poi in ownerPois)
-                                {
-                                    <option value="@poi.Poiid">@poi.Name</option>
-                                }
-                            </select>
+            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-primary text-white rounded-top-4 border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-journal-text me-2"></i>@(isEditMode ? "Cập nhật món" : "Thêm món mới")</h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CloseForm"></button>
                         </div>
-                        <div class="col-lg-4">
-                            <label class="form-label small text-muted">Tên món</label>
-                            <input class="form-control" @bind="menuForm.FoodName" placeholder="Ví dụ: Ốc len xào dừa" />
-                        </div>
-                        <div class="col-lg-2">
-                            <label class="form-label small text-muted">Giá</label>
-                            <input class="form-control" type="number" @bind="menuForm.Price" placeholder="20000" />
-                        </div>
-                        <div class="col-lg-2">
-                            <label class="form-label small text-muted">Ảnh (URL)</label>
-                            <input class="form-control" @bind="menuForm.Image" placeholder="https://..." />
-                            <InputFile OnChange="OnMenuImageSelectedAsync" class="form-control mt-2" accept="image/*" />
-                            @if (isUploadingImage)
+                        <div class="modal-body p-4 bg-light">
+                            @if (!string.IsNullOrWhiteSpace(formError))
                             {
-                                <div class="small text-muted mt-1">Đang tải ảnh...</div>
+                                <div class="alert alert-danger">@formError</div>
                             }
+                            <div class="row g-3">
+                                <div class="col-lg-4">
+                                    <label class="form-label fw-bold text-dark">Quán</label>
+                                    <select class="form-select shadow-sm border-0" @bind="menuForm.Poiid" disabled="@(!ownerPois.Any())">
+                                        <option value="">-- Chọn quán --</option>
+                                        @foreach (var poi in ownerPois)
+                                        {
+                                            <option value="@poi.Poiid">@poi.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-lg-4">
+                                    <label class="form-label fw-bold text-dark">Tên món</label>
+                                    <input class="form-control shadow-sm border-0" @bind="menuForm.FoodName" placeholder="Ví dụ: Ốc len xào dừa" />
+                                </div>
+                                <div class="col-lg-2">
+                                    <label class="form-label fw-bold text-dark">Giá</label>
+                                    <input class="form-control shadow-sm border-0" type="number" @bind="menuForm.Price" placeholder="20000" />
+                                </div>
+                                <div class="col-lg-2">
+                                    <label class="form-label fw-bold text-dark">Ảnh (URL)</label>
+                                    <input class="form-control shadow-sm border-0" @bind="menuForm.Image" placeholder="https://..." />
+                                    <InputFile OnChange="OnMenuImageSelectedAsync" class="form-control mt-2" accept="image/*" />
+                                    @if (isUploadingImage)
+                                    {
+                                        <div class="small text-muted mt-1">Đang tải ảnh...</div>
+                                    }
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                        <button class="btn btn-light" @onclick="CloseForm" disabled="@isSaving">Hủy</button>
-                        <button class="btn btn-primary" @onclick="SaveMenuAsync" disabled="@isSaving">
-                            @(isSaving ? "Đang lưu..." : "Lưu")
-                        </button>
+                        <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
+                            <button type="button" class="btn btn-outline-secondary px-4 rounded-pill" @onclick="CloseForm" disabled="@isSaving">Hủy</button>
+                            <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" @onclick="SaveMenuAsync" disabled="@isSaving">
+                                @(isSaving ? "Đang lưu..." : "Lưu")
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

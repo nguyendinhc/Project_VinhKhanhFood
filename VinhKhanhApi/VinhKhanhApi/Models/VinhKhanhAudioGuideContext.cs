@@ -29,6 +29,10 @@ public partial class VinhKhanhAudioGuideContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<UserFavorite> UserFavorites { get; set; }
+
+    public virtual DbSet<UserPreference> UserPreferences { get; set; }
+
     public virtual DbSet<VisitLog> VisitLogs { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -157,6 +161,46 @@ public partial class VinhKhanhAudioGuideContext : DbContext
 
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
             entity.Property(e => e.RoleName).HasMaxLength(255);
+        });
+
+        modelBuilder.Entity<UserFavorite>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.Poiid }).HasName("PK__UserFavorites");
+
+            entity.ToTable("UserFavorites");
+
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.Poiid).HasColumnName("POIID");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserFavorites)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK__UserFavorites__UserID");
+
+            entity.HasOne(d => d.Poi).WithMany()
+                .HasForeignKey(d => d.Poiid)
+                .HasConstraintName("FK__UserFavorites__POIID");
+        });
+
+        modelBuilder.Entity<UserPreference>(entity =>
+        {
+            entity.HasKey(e => e.UserId).HasName("PK__UserPreferences");
+
+            entity.ToTable("UserPreferences");
+
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.PreferredLanguage)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.User).WithOne(p => p.UserPreference)
+                .HasForeignKey<UserPreference>(d => d.UserId)
+                .HasConstraintName("FK__UserPreferences__UserID");
         });
 
         modelBuilder.Entity<VisitLog>(entity =>

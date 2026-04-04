@@ -9,6 +9,7 @@ public partial class DetailPage : ContentPage
 {
     private Poi _poi;
     private readonly ApiService _apiService = new ApiService();
+    private readonly OfflineSyncService _offlineSyncService;
     private bool _isLoadingDetail;
 
     // Sửa constructor để nhận đối tượng Poi
@@ -16,6 +17,7 @@ public partial class DetailPage : ContentPage
     {
         InitializeComponent();
         _poi = poi;
+        _offlineSyncService = new OfflineSyncService(_apiService);
         BindingContext = _poi;
 
         //  Vừa mở trang lên là kiểm tra xem quán này đã thả tim chưa
@@ -91,7 +93,7 @@ public partial class DetailPage : ContentPage
             string currentLangCode = Preferences.Default.Get("AppLanguage", "vi");
 
             // 2. Tìm đoạn giới thiệu đúng ngôn ngữ trong dữ liệu trả về từ API
-            string textToSpeak = "";
+            string? textToSpeak = null;
 
             if (_poi.Poilocalizations != null && _poi.Poilocalizations.Any())
             {
@@ -145,10 +147,10 @@ public partial class DetailPage : ContentPage
 
     private void CheckFavoriteStatus()
     {
-        // Lấy danh sách tên quán đã lưu trong máy
-        string savedFavorites = Preferences.Default.Get("FavoritePois", "");
+        var favoritePoiIds = GetFavoritePoiIds();
+        var legacyFavorites = Preferences.Default.Get("FavoritePois", "");
 
-        if (savedFavorites.Contains(_poi.Name))
+        if (favoritePoiIds.Contains(_poi.Poiid) || legacyFavorites.Contains(_poi.Name))
         {
             // Đã tim rồi thì hiện tim đỏ, nền hồng
             btnFavorite.Text = "❤️ Đã Yêu thích";
@@ -164,26 +166,63 @@ public partial class DetailPage : ContentPage
 
     private void OnFavoriteClicked(object sender, EventArgs e)
     {
-        // Lấy danh sách cũ ra
-        string savedFavorites = Preferences.Default.Get("FavoritePois", "");
-        List<string> favList = savedFavorites.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        var favoritePoiIds = GetFavoritePoiIds();
+        var legacyFavorites = Preferences.Default.Get("FavoritePois", "");
+        var legacyList = legacyFavorites.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-        if (favList.Contains(_poi.Name))
+        var isFavorite = favoritePoiIds.Contains(_poi.Poiid);
+        if (isFavorite)
         {
-            // Nếu có tên trong danh sách rồi -> Bấm phát nữa là XÓA (Bỏ thích)
-            favList.Remove(_poi.Name);
+            favoritePoiIds.Remove(_poi.Poiid);
+            legacyList.Remove(_poi.Name);
         }
         else
         {
-            // Nếu chưa có -> THÊM vào danh sách
-            favList.Add(_poi.Name);
+            favoritePoiIds.Add(_poi.Poiid);
+            if (!legacyList.Contains(_poi.Name))
+            {
+                legacyList.Add(_poi.Name);
+            }
         }
 
-        // Đóng gói lại thành chuỗi và lưu ngược vào bộ nhớ máy
-        string newFavorites = string.Join(",", favList);
-        Preferences.Default.Set("FavoritePois", newFavorites);
+        SaveFavoritePoiIds(favoritePoiIds);
+        Preferences.Default.Set("FavoritePois", string.Join(",", legacyList));
 
-        // Gọi lại hàm kiểm tra để đổi màu nút ngay lập tức
+        var token = Preferences.Default.Get("AuthToken", string.Empty);
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            _ = _offlineSyncService.EnqueueFavoriteActionAsync(_poi.Poiid, !isFavorite);
+            _ = _offlineSyncService.ProcessPendingActionsAsync();
+        }
+
         CheckFavoriteStatus();
+    }
+
+    private static HashSet<int> GetFavoritePoiIds()
+    {
+        var saved = Preferences.Default.Get("FavoritePoiIds", string.Empty);
+        var values = saved.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var result = new HashSet<int>();
+        foreach (var value in values)
+        {
+            if (int.TryParse(value, out var id))
+            {
+                result.Add(id);
+            }
+        }
+
+        return result;
+    }
+
+    private static void SaveFavoritePoiIds(HashSet<int> favoritePoiIds)
+    {
+        var serialized = string.Join(",", favoritePoiIds.OrderBy(id => id));
+        if (string.IsNullOrWhiteSpace(serialized))
+        {
+            Preferences.Default.Remove("FavoritePoiIds");
+            return;
+        }
+
+        Preferences.Default.Set("FavoritePoiIds", serialized);
     }
 }

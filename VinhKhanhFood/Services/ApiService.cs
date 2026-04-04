@@ -3,6 +3,7 @@ using Microsoft.Maui.Storage;
 using Newtonsoft.Json;
 using System.IO;
 using System.Security.Cryptography;
+using System.Net.Http.Headers;
 using System.Text;
 using VinhKhanhFood.Models;
 
@@ -12,7 +13,7 @@ namespace VinhKhanhFood.Services
     {
         // QUAN TRỌNG: Thay IP của máy tính bạn vào đây (Ví dụ: 192.168.1.5)
         // Số 7044 là Port của Web API (xem lại trên trình duyệt khi chạy API)
-        private const string BaseApiUrl = "http://10.24.174.26:5100/api/";
+        private const string BaseApiUrl = "http://192.168.100.106:5100/api/";
         private static readonly string BaseFileUrl = BaseApiUrl.EndsWith("api/", StringComparison.OrdinalIgnoreCase)
             ? BaseApiUrl[..^4]
             : BaseApiUrl;
@@ -115,6 +116,72 @@ namespace VinhKhanhFood.Services
             }
         }
 
+        public async Task<List<int>> GetFavoritePoiIdsAsync()
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BaseApiUrl + "user-favorites");
+            ApplyAuthorizationHeader(request);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"API lỗi {(int)response.StatusCode}: {content}");
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonConvert.DeserializeObject<List<int>>(json) ?? new List<int>();
+        }
+
+        public async Task SetFavoriteAsync(int poiId, bool isFavorite)
+        {
+            var method = isFavorite ? HttpMethod.Put : HttpMethod.Delete;
+            using var request = new HttpRequestMessage(method, BaseApiUrl + $"user-favorites/{poiId}");
+            ApplyAuthorizationHeader(request);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"API lỗi {(int)response.StatusCode}: {content}");
+            }
+        }
+
+        public async Task<string?> GetPreferredLanguageAsync()
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BaseApiUrl + "user-preferences/language");
+            ApplyAuthorizationHeader(request);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"API lỗi {(int)response.StatusCode}: {content}");
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonConvert.DeserializeObject<UserLanguageResponse>(json);
+            return result?.LanguageCode;
+        }
+
+        public async Task SetPreferredLanguageAsync(string languageCode)
+        {
+            var payload = new UserLanguageRequest { LanguageCode = languageCode };
+            var json = JsonConvert.SerializeObject(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var request = new HttpRequestMessage(HttpMethod.Put, BaseApiUrl + "user-preferences/language")
+            {
+                Content = content
+            };
+            ApplyAuthorizationHeader(request);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"API lỗi {(int)response.StatusCode}: {error}");
+            }
+        }
+
         private async Task<string?> CacheImageAsync(string? imagePath, string prefix)
         {
             if (string.IsNullOrWhiteSpace(imagePath))
@@ -170,6 +237,27 @@ namespace VinhKhanhFood.Services
             }
 
             return Uri.TryCreate(new Uri(BaseFileUrl), trimmed, out var combined) ? combined : null;
+        }
+
+        private static void ApplyAuthorizationHeader(HttpRequestMessage request)
+        {
+            var token = Preferences.Default.Get("AuthToken", string.Empty);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return;
+            }
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        private class UserLanguageRequest
+        {
+            public string LanguageCode { get; set; } = string.Empty;
+        }
+
+        private class UserLanguageResponse
+        {
+            public string? LanguageCode { get; set; }
         }
     }
 }

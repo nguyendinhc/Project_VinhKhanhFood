@@ -11,13 +11,15 @@ namespace VinhKhanhApi.Controllers
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
 
         [HttpPost("menu")]
-        public async Task<IActionResult> UploadMenuAsync([FromForm] IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadMenuAsync(IFormFile file)
         {
             return await SaveFileAsync(file, "menus");
         }
 
         [HttpPost("poi")]
-        public async Task<IActionResult> UploadPoiAsync([FromForm] IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadPoiAsync(IFormFile file)
         {
             return await SaveFileAsync(file, "pois");
         }

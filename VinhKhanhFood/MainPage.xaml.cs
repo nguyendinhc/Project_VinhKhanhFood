@@ -14,7 +14,7 @@ namespace VinhKhanhFood;
 public partial class MainPage : ContentPage
 {
     private static readonly HttpClient _httpClient = new();
-    private List<Poi> _allPois;
+    private List<Poi> _allPois = new();
     ApiService _apiService = new ApiService();
     private readonly OfflineSyncService _offlineSyncService;
     bool _isNavigating;
@@ -85,7 +85,6 @@ public partial class MainPage : ContentPage
             myMap.IsShowingUser = true;
 
             List<Poi> data = new();
-            bool loadedFromOffline = false;
             try
             {
                 data = await _apiService.GetPoisAsync();
@@ -97,7 +96,6 @@ public partial class MainPage : ContentPage
             if (data == null || !data.Any())
             {
                 data = await _offlineSyncService.LoadPoisAsync();
-                loadedFromOffline = data.Any();
             }
 
             if (data != null && data.Any())
@@ -144,11 +142,6 @@ public partial class MainPage : ContentPage
                 }
 
                 StartGpsTimer();
-
-                if (loadedFromOffline && OfflineSyncService.ShouldShowOfflineNotice())
-                {
-                    await DisplayAlert("Thông báo", "Đang dùng dữ liệu offline đã đồng bộ.", "OK");
-                }
             }
             else
             {
@@ -164,6 +157,7 @@ public partial class MainPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        _ = _offlineSyncService.ProcessPendingActionsAsync();
         if (lstPois.ItemsSource is IEnumerable<Poi> pois && pois.Any())
         {
             StartGpsTimer();
@@ -414,7 +408,7 @@ public partial class MainPage : ContentPage
                 {
                     string currentLangCode = Preferences.Default.Get("AppLanguage", "vi");
 
-                    string localizedDesc = nearestPoi.Poilocalizations?
+                    string? localizedDesc = nearestPoi.Poilocalizations?
                         .FirstOrDefault(x => x.LanguageCode.ToLower() == currentLangCode)?
                         .Description;
 

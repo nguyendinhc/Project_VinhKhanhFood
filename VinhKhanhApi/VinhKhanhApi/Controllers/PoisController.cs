@@ -35,7 +35,10 @@ namespace VinhKhanhApi.Controllers
             var pois = await _context.Pois
                 .AsNoTracking()
                 .Include(p => p.Poilocalizations)
-                .Where(p => IsActiveStatus(p.Status))
+                .Where(p => p.Status != null &&
+                            (p.Status.Equals("Active") ||
+                             p.Status.Equals("active") ||
+                             p.Status.Equals("1")))
                 .ToListAsync();
 
             NormalizePoiThumbnails(pois);

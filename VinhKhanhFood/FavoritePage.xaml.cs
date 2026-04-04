@@ -23,11 +23,18 @@ public partial class FavoritePage : ContentPage
     {
         base.OnAppearing();
 
+        await _offlineSyncService.ProcessPendingActionsAsync();
+
         // 1. Đọc bộ nhớ xem khách đã thả tim những quán nào
         string savedFavorites = Preferences.Default.Get("FavoritePois", "");
+        string savedFavoriteIds = Preferences.Default.Get("FavoritePoiIds", "");
         List<string> favNames = savedFavorites.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        List<int> favIds = savedFavoriteIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => int.TryParse(value, out var id) ? id : -1)
+            .Where(id => id > 0)
+            .ToList();
 
-        if (favNames.Count == 0)
+        if (favNames.Count == 0 && favIds.Count == 0)
         {
             lstFavorites.ItemsSource = null;
             lblEmpty.IsVisible = true;
@@ -37,7 +44,6 @@ public partial class FavoritePage : ContentPage
         try
         {
             List<Poi> allPois = new();
-            bool loadedFromOffline = false;
 
             try
             {
@@ -50,7 +56,6 @@ public partial class FavoritePage : ContentPage
             if (allPois == null || !allPois.Any())
             {
                 allPois = await _offlineSyncService.LoadPoisAsync();
-                loadedFromOffline = allPois.Any();
             }
 
             if (allPois != null && allPois.Any())
@@ -62,14 +67,11 @@ public partial class FavoritePage : ContentPage
                     item.Description = "Địa điểm tham quan hấp dẫn tại Vĩnh Khánh";
                 }
 
-                var favoritePois = allPois.Where(p => favNames.Contains(p.Name)).ToList();
+                var favoritePois = allPois
+                    .Where(p => favIds.Contains(p.Poiid) || favNames.Contains(p.Name))
+                    .ToList();
                 lstFavorites.ItemsSource = favoritePois;
                 lblEmpty.IsVisible = !favoritePois.Any();
-
-                if (loadedFromOffline && OfflineSyncService.ShouldShowOfflineNotice())
-                {
-                    await DisplayAlert("Thông báo", "Đang dùng dữ liệu offline đã đồng bộ.", "OK");
-                }
             }
             else
             {

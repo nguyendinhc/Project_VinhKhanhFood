@@ -1,23 +1,25 @@
 ﻿using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
-using System.Globalization;
 using VinhKhanhFood.Services;
 
 namespace VinhKhanhFood;
 
 public partial class SettingsPage : ContentPage
 {
-    private readonly OfflineSyncService _offlineSyncService = new(new ApiService());
+    private readonly OfflineSyncService _offlineSyncService;
     private Button? _btnOfflineSync;
     private Label? _lblOfflineSyncStatus;
     private Frame? _accountCard;
+    private Frame? _ownerAreaCard;
 
     public SettingsPage()
     {
         InitializeComponent();
+        _offlineSyncService = new OfflineSyncService(new ApiService());
         _btnOfflineSync = this.FindByName<Button>("btnOfflineSync");
         _lblOfflineSyncStatus = this.FindByName<Label>("lblOfflineSyncStatus");
         _accountCard = this.FindByName<Frame>("accountCard");
+        _ownerAreaCard = this.FindByName<Frame>("ownerAreaCard");
     }
 
     // Hàm này tự chạy khi mở trang Cài đặt lên
@@ -34,22 +36,26 @@ public partial class SettingsPage : ContentPage
             _accountCard.IsVisible = isLoggedIn;
         }
 
+        if (_ownerAreaCard != null)
+        {
+            _ownerAreaCard.IsVisible = !isLoggedIn;
+        }
+
         lblLoggedInUser.Text = isLoggedIn
             ? (string.IsNullOrWhiteSpace(displayName) ? "Đã đăng nhập" : displayName)
             : "Chưa đăng nhập";
 
         string lang = Preferences.Default.Get("AppLanguage", "vi");
-        switch (lang)
-        {
-            case "vi": pckLanguage.SelectedIndex = 0; break;
-            case "en": pckLanguage.SelectedIndex = 1; break;
-            case "ko": pckLanguage.SelectedIndex = 2; break;
-            case "zh": pckLanguage.SelectedIndex = 3; break;
-            case "ja": pckLanguage.SelectedIndex = 4; break; // THÊM DÒNG NÀY
-        }
+        ApplyLanguageSelection(lang);
 
         swAutoPlay.IsToggled = Preferences.Default.Get("AutoPlayGPS", true);
         UpdateOfflineSyncStatus();
+
+        Dispatcher.Dispatch(async () =>
+        {
+            await _offlineSyncService.ProcessPendingActionsAsync();
+            ApplyLanguageSelection(Preferences.Default.Get("AppLanguage", "vi"));
+        });
     }
 
     private void OnLanguageChanged(object sender, EventArgs e)
@@ -78,6 +84,13 @@ public partial class SettingsPage : ContentPage
         Preferences.Default.Set("AppLanguage", selectedLang);
         Preferences.Default.Set("AutoPlayGPS", swAutoPlay.IsToggled);
 
+        var token = Preferences.Default.Get("AuthToken", string.Empty);
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            await _offlineSyncService.EnqueueLanguageActionAsync(selectedLang);
+            await _offlineSyncService.ProcessPendingActionsAsync();
+        }
+
         var options = new SnackbarOptions
         {
             BackgroundColor = Color.FromArgb("#FF5722"),
@@ -87,6 +100,18 @@ public partial class SettingsPage : ContentPage
 
         var snackbar = Snackbar.Make("Đã lưu cài đặt", visualOptions: options);
         await snackbar.Show();
+    }
+
+    private void ApplyLanguageSelection(string languageCode)
+    {
+        switch (languageCode)
+        {
+            case "vi": pckLanguage.SelectedIndex = 0; break;
+            case "en": pckLanguage.SelectedIndex = 1; break;
+            case "ko": pckLanguage.SelectedIndex = 2; break;
+            case "zh": pckLanguage.SelectedIndex = 3; break;
+            case "ja": pckLanguage.SelectedIndex = 4; break;
+        }
     }
 
     private async void OnOfflineSyncClicked(object sender, EventArgs e)

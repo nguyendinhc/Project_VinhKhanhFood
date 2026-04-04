@@ -21,5 +21,9 @@ public partial class AdminUser
 
     public virtual ICollection<PoiSubmission> PoiSubmissions { get; set; } = new List<PoiSubmission>();
 
+    public virtual ICollection<UserFavorite> UserFavorites { get; set; } = new List<UserFavorite>();
+
+    public virtual UserPreference? UserPreference { get; set; }
+
     public virtual Role? Role { get; set; }
 }

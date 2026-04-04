@@ -59,7 +59,7 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <Frame CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
+            <Frame x:Name="ownerAreaCard" CornerRadius="15" HasShadow="True" BorderColor="Transparent" BackgroundColor="White" Padding="15">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="🏪 Khu vực Chủ quán" FontSize="16" FontAttributes="Bold" TextColor="Black" />
                     <Label Text="Đăng ký để gửi yêu cầu trở thành chủ quán. Sau khi được duyệt, bạn có thể đăng nhập quản lý." FontSize="12" TextColor="Gray" />
