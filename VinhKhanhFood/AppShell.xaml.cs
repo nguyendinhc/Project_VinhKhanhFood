@@ -103,10 +103,24 @@ namespace VinhKhanhFood
                 HeightRequest = 48
             };
 
+            var navigation = await GetNavigationWhenReadyAsync();
+            if (navigation == null)
+            {
+                return;
+            }
             closeButton.Clicked += async (_, _) =>
             {
-                await overlay.Navigation.PopModalAsync();
-                closeSignal.TrySetResult();
+                try
+                {
+                    if (navigation != null && navigation.ModalStack.Contains(overlay))
+                    {
+                        await navigation.PopModalAsync();
+                    }
+                }
+                finally
+                {
+                    closeSignal.TrySetResult();
+                }
             };
 
             overlay.Content = new Grid
@@ -149,7 +163,7 @@ namespace VinhKhanhFood
                 }
             };
 
-            await Navigation.PushModalAsync(overlay, false);
+            await navigation.PushModalAsync(overlay, false);
             await closeSignal.Task;
         }
 
@@ -174,10 +188,24 @@ namespace VinhKhanhFood
                 HeightRequest = 48
             };
 
+            var navigation = await GetNavigationWhenReadyAsync();
+            if (navigation == null)
+            {
+                return;
+            }
             closeButton.Clicked += async (_, _) =>
             {
-                await overlay.Navigation.PopModalAsync();
-                closeSignal.TrySetResult();
+                try
+                {
+                    if (navigation != null && navigation.ModalStack.Contains(overlay))
+                    {
+                        await navigation.PopModalAsync();
+                    }
+                }
+                finally
+                {
+                    closeSignal.TrySetResult();
+                }
             };
 
             overlay.Content = new Grid
@@ -220,8 +248,25 @@ namespace VinhKhanhFood
                 }
             };
 
-            await Navigation.PushModalAsync(overlay, false);
+            await navigation.PushModalAsync(overlay, false);
             await closeSignal.Task;
+        }
+
+        private static async Task<INavigation?> GetNavigationWhenReadyAsync()
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (DateTime.UtcNow < deadline)
+            {
+                var page = Shell.Current?.CurrentPage ?? Application.Current?.MainPage;
+                if (page is Page rootPage && rootPage.Handler != null && rootPage.IsLoaded)
+                {
+                    return Shell.Current?.Navigation ?? rootPage.Navigation;
+                }
+
+                await Task.Delay(100);
+            }
+
+            return null;
         }
 
         private async void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)

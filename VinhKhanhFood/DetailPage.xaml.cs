@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Maui.Networking;
 using VinhKhanhFood.Models;
 using VinhKhanhFood.Services;
 
@@ -46,6 +47,29 @@ public partial class DetailPage : ContentPage
         _isLoadingDetail = true;
         try
         {
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                var cachedPois = await _offlineSyncService.LoadPoisAsync();
+                var cachedPoi = cachedPois.FirstOrDefault(p => p.Poiid == _poi.Poiid);
+                if (cachedPoi != null)
+                {
+                    cachedPoi.Introduction = cachedPoi.Poilocalizations?.FirstOrDefault()?.Description
+                                             ?? _poi.Introduction
+                                             ?? "Chào mừng bạn đến với " + cachedPoi.Name;
+                    cachedPoi.Description = _poi.Description ?? "Địa điểm tham quan hấp dẫn tại Vĩnh Khánh";
+
+                    if (cachedPoi.Menus == null || !cachedPoi.Menus.Any())
+                    {
+                        cachedPoi.Menus = _poi.Menus ?? new List<Menu>();
+                    }
+
+                    _poi = cachedPoi;
+                    BindingContext = _poi;
+                }
+
+                return;
+            }
+
             var detailPoi = await _apiService.GetPoiByIdAsync(_poi.Poiid);
             if (detailPoi == null)
             {
@@ -224,5 +248,9 @@ public partial class DetailPage : ContentPage
         }
 
         Preferences.Default.Set("FavoritePoiIds", serialized);
+    }
+
+    private void Dummy()
+    {
     }
 }
