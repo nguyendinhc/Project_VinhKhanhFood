@@ -9,11 +9,15 @@
     <Shell.Resources>
         <ResourceDictionary>
             <Style TargetType="TabBar">
-                <Setter Property="Shell.TabBarBackgroundColor" Value="#222222" />
+                <Setter Property="Shell.BackgroundColor" Value="#FFF8F1" />
+                <Setter Property="Shell.ForegroundColor" Value="#FF5722" />
+                <Setter Property="Shell.TitleColor" Value="#2F2F2F" />
 
+                <Setter Property="Shell.TabBarBackgroundColor" Value="#FFF8F1" />
+                <Setter Property="Shell.TabBarForegroundColor" Value="#FF5722" />
                 <Setter Property="Shell.TabBarTitleColor" Value="#FF5722" />
-
-                <Setter Property="Shell.TabBarUnselectedColor" Value="#AAAAAA" />
+                <Setter Property="Shell.TabBarUnselectedColor" Value="#A08A7A" />
+                <Setter Property="Shell.TabBarDisabledColor" Value="#CBBEB2" />
             </Style>
         </ResourceDictionary>
     </Shell.Resources>

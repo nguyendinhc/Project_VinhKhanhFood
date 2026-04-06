@@ -479,7 +479,6 @@ public partial class MainPage : ContentPage
         MainThread.BeginInvokeOnMainThread(() =>
         {
             _lastKnownLocation = location;
-            lblCurrentLocation.Text = $"Vị trí hiện tại: {location.Latitude:F6}, {location.Longitude:F6}";
 
             if (_userLocationCircle == null)
             {

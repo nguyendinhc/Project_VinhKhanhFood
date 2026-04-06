@@ -1,0 +1,83 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             x:Class="VinhKhanhFood.MainPage"
+             BackgroundColor="#F5F7F8">
+    <AbsoluteLayout>
+        <maps:Map x:Name="myMap"
+                  AbsoluteLayout.LayoutBounds="0,0,1,1"
+                  AbsoluteLayout.LayoutFlags="All" />
+
+        <Border AbsoluteLayout.LayoutBounds="0.5,0.06,0.92,-1"
+                AbsoluteLayout.LayoutFlags="PositionProportional,WidthProportional"
+                Padding="14,8"
+                BackgroundColor="#FFF8F1"
+                Stroke="#F3D0C2"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 16">
+            <SearchBar x:Name="searchBar"
+                       Placeholder="Tìm quán, món ?n..."
+                       TextChanged="OnSearchTextChanged"
+                       TextColor="#2C2C2C"
+                       PlaceholderColor="#A08A7A"
+                       CancelButtonColor="#FF5722"
+                       HeightRequest="42"
+                       BackgroundColor="Transparent" />
+        </Border>
+
+        <Border AbsoluteLayout.LayoutBounds="0.5,1,1,0.50"
+                AbsoluteLayout.LayoutFlags="All"
+                Padding="16,14,16,8"
+                BackgroundColor="#FFF8F1"
+                Stroke="#EED2C5"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 24,24,0,0">
+            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                    <BoxView WidthRequest="42"
+                             HeightRequest="5"
+                             CornerRadius="3"
+                             Color="#E7B7A5"
+                             HorizontalOptions="Center"
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1"
+                           Text="??a ?i?m g?n b?n"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="#FF5722"
+                           VerticalOptions="Center" />
+                </Grid>
+
+                <CollectionView Grid.Row="1" x:Name="lstPois" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Frame Margin="0,5"
+                                   Padding="10"
+                                   CornerRadius="14"
+                                   HasShadow="True"
+                                   BorderColor="#F1DDD4"
+                                   BackgroundColor="White">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnPoiTapped" CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
+
+                                <HorizontalStackLayout Spacing="12">
+                                    <Image Source="{Binding ImageUrl}"
+                                           WidthRequest="72"
+                                           HeightRequest="72"
+                                           Aspect="AspectFill" />
+
+                                    <VerticalStackLayout VerticalOptions="Center" Spacing="3">
+                                        <Label Text="{Binding Name}" FontSize="16" FontAttributes="Bold" TextColor="#2F2F2F" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding Status}" TextColor="#4CAF50" FontSize="12" FontAttributes="Bold" />
+                                        <Label Text="Ch?m ?? xem chi ti?t" TextColor="#8C8C8C" FontSize="11" />
+                                    </VerticalStackLayout>
+                                </HorizontalStackLayout>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+        </Border>
+    </AbsoluteLayout>
+</ContentPage>
