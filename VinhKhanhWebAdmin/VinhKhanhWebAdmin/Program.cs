@@ -1,4 +1,5 @@
 ﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using VinhKhanhWebAdmin.Components;
 using VinhKhanhWebAdmin.Services;
@@ -30,6 +31,23 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddBlazoredLocalStorage();
 // Kích hoạt Hệ thống Phân quyền Cốt lõi
 builder.Services.AddAuthorizationCore();
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/";
+        options.AccessDeniedPath = "/";
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.Redirect("/");
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.Redirect("/");
+            return Task.CompletedTask;
+        };
+    });
 builder.Services.AddCascadingAuthenticationState();
 
 // Đăng ký Máy quét thẻ của bạn làm Máy quét chính thức của cả hệ thống
@@ -48,6 +66,8 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 app.UseAntiforgery();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

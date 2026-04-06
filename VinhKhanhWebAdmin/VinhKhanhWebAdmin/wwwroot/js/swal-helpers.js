@@ -25,6 +25,21 @@ window.confirmDeletePoi = async function (poiName) {
     return result.isConfirmed;
 };
 
+window.confirmDeleteUser = async function (userName) {
+    const result = await vkSwal.fire({
+        title: 'Xác nhận xóa?',
+        text: `Bạn có chắc muốn xóa user "${userName}" không?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xóa ngay',
+        cancelButtonText: 'Hủy',
+        reverseButtons: true,
+        focusCancel: true
+    });
+
+    return result.isConfirmed;
+};
+
 window.showSuccessMessage = async function (title, text) {
     await vkSwal.fire({
         title,

@@ -16,22 +16,22 @@
                 <button class="btn btn-outline-primary rounded-pill" @onclick="LoadUsersAsync" disabled="@isLoading">
                     <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
                 </button>
-                <button class="btn btn-primary rounded-pill" @onclick="OpenCreateModal">
+                <button class="btn btn-primary rounded-pill shadow-sm" @onclick="OpenCreateModal">
                     <i class="bi bi-person-plus me-1"></i>Thêm user
                 </button>
             </div>
         </div>
 
         <div class="card border-0 shadow-sm rounded-4 mb-3">
-            <div class="card-body p-3">
+            <div class="card-body p-3 bg-light rounded-4">
                 <div class="row g-2 align-items-end">
                     <div class="col-lg-5 col-md-6">
-                        <label class="form-label small text-muted mb-1">Từ khóa</label>
-                        <input class="form-control" @bind="keyword" placeholder="Username, họ tên, email..." />
+                        <label class="form-label fw-bold text-dark mb-1">Từ khóa</label>
+                        <input class="form-control shadow-sm border-0" @bind="keyword" placeholder="Username, họ tên, email..." />
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <label class="form-label small text-muted mb-1">Role</label>
-                        <select class="form-select" @bind="selectedRoleId">
+                        <label class="form-label fw-bold text-dark mb-1">Role</label>
+                        <select class="form-select shadow-sm border-0" @bind="selectedRoleId">
                             <option value="">Tất cả role</option>
                             @foreach (var role in roles)
                             {
@@ -41,7 +41,7 @@
                     </div>
                     <div class="col-lg-2 col-md-6 d-flex gap-2">
                         <button class="btn btn-primary w-100" @onclick="ApplyFiltersAsync" disabled="@isLoading">Lọc</button>
-                        <button class="btn btn-light border" @onclick="ResetFiltersAsync" disabled="@isLoading">Reset</button>
+                        <button class="btn btn-outline-secondary" @onclick="ResetFiltersAsync" disabled="@isLoading">Reset</button>
                     </div>
                 </div>
             </div>
@@ -95,53 +95,55 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+            <div class="table-responsive shadow-sm rounded border-0">
+                <table class="table table-hover align-middle bg-white m-0 w-100">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th width="8%">ID</th>
+                            <th width="20%" class="text-start">Username</th>
+                            <th width="22%" class="text-start">Họ tên</th>
+                            <th width="24%" class="text-start">Email</th>
+                            <th width="12%">Role</th>
+                            <th width="14%">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        @if (userResult.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Không có user nào phù hợp.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var user in userResult.Items)
+                            {
                                 <tr>
-                                    <th width="8%">ID</th>
-                                    <th width="20%">Username</th>
-                                    <th width="22%">Họ tên</th>
-                                    <th width="24%">Email</th>
-                                    <th width="12%">Role</th>
-                                    <th width="14%">Thao tác</th>
+                                    <td><span class="text-muted small">#@user.UserId</span></td>
+                                    <td class="text-start fw-bold text-primary">@user.UserName</td>
+                                    <td class="text-start">@(string.IsNullOrWhiteSpace(user.FullName) ? "-" : user.FullName)</td>
+                                    <td class="text-start">@(string.IsNullOrWhiteSpace(user.Email) ? "-" : user.Email)</td>
+                                    <td>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle">@(string.IsNullOrWhiteSpace(user.RoleName) ? "Chưa gán" : user.RoleName)</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <button class="btn btn-light btn-sm rounded-3 border" @onclick="() => OpenEditModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-light btn-sm rounded-3 border text-warning" @onclick="() => OpenResetPasswordModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                            <button class="btn btn-light btn-sm rounded-3 border text-danger" @onclick="() => OpenDeleteUserModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @if (userResult.Items.Count == 0)
-                                {
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">Không có user nào phù hợp.</td>
-                                    </tr>
-                                }
-                                else
-                                {
-                                    @foreach (var user in userResult.Items)
-                                    {
-                                        <tr>
-                                            <td>#@user.UserId</td>
-                                            <td class="fw-semibold">@user.UserName</td>
-                                            <td>@(string.IsNullOrWhiteSpace(user.FullName) ? "-" : user.FullName)</td>
-                                            <td>@(string.IsNullOrWhiteSpace(user.Email) ? "-" : user.Email)</td>
-                                            <td>
-                                                <span class="badge bg-info-subtle text-info border border-info-subtle">@(string.IsNullOrWhiteSpace(user.RoleName) ? "Chưa gán" : user.RoleName)</span>
-                                            </td>
-                                            <td>
-                                                 <div class="d-flex gap-1">
-                                                     <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Sửa</button>
-                                                     <button class="btn btn-sm btn-outline-warning" @onclick="() => OpenResetPasswordModal(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Đặt lại MK</button>
-                                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUserAsync(user)" disabled="@(!CanManageUser(user))" title="@GetCannotManageReason(user)">Xóa</button>
-                                                 </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            }
+                        }
+                    </tbody>
+                </table>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-3">
@@ -162,51 +164,53 @@
 
         @if (showUserModal)
         {
-            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow rounded-4">
-                        <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title fw-bold text-primary">@(isEditMode ? "Cập nhật user" : "Thêm user mới")</h5>
-                            <button type="button" class="btn-close" @onclick="CloseUserModal"></button>
+            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-primary text-white rounded-top-4 border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-person-vcard me-2"></i>@(isEditMode ? "Cập nhật user" : "Thêm user mới")</h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CloseUserModal"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body p-4 bg-light">
                             @if (!string.IsNullOrWhiteSpace(modalErrorMessage))
                             {
                                 <div class="alert alert-danger py-2">@modalErrorMessage</div>
                             }
-                            <div class="mb-2">
-                                <label class="form-label small text-muted">Username</label>
-                                <input class="form-control" @bind="editingUser.UserName" disabled="@isEditMode" />
-                            </div>
-                            @if (!isEditMode)
-                            {
-                                <div class="mb-2">
-                                    <label class="form-label small text-muted">Mật khẩu</label>
-                                    <input class="form-control" type="password" @bind="editingUser.Password" />
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Username</label>
+                                    <input class="form-control shadow-sm border-0" @bind="editingUser.UserName" disabled="@isEditMode" />
                                 </div>
-                            }
-                            <div class="mb-2">
-                                <label class="form-label small text-muted">Họ tên</label>
-                                <input class="form-control" @bind="editingUser.FullName" />
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label small text-muted">Email</label>
-                                <input class="form-control" @bind="editingUser.Email" />
-                            </div>
-                            <div>
-                                <label class="form-label small text-muted">Role</label>
-                                <select class="form-select" @bind="editingUser.RoleId">
-                                    <option value="">Chưa gán</option>
-                                    @foreach (var role in roles)
-                                    {
-                                        <option value="@role.RoleId">@role.RoleName</option>
-                                    }
-                                </select>
+                                @if (!isEditMode)
+                                {
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-dark">Mật khẩu</label>
+                                        <input class="form-control shadow-sm border-0" type="password" @bind="editingUser.Password" />
+                                    </div>
+                                }
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Họ tên</label>
+                                    <input class="form-control shadow-sm border-0" @bind="editingUser.FullName" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Email</label>
+                                    <input class="form-control shadow-sm border-0" @bind="editingUser.Email" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Role</label>
+                                    <select class="form-select shadow-sm border-0" @bind="editingUser.RoleId">
+                                        <option value="">Chưa gán</option>
+                                        @foreach (var role in roles)
+                                        {
+                                            <option value="@role.RoleId">@role.RoleName</option>
+                                        }
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer border-0 pt-0">
-                            <button class="btn btn-light border" @onclick="CloseUserModal" disabled="@isSaving">Hủy</button>
-                            <button class="btn btn-primary" @onclick="SaveUserAsync" disabled="@isSaving">
+                        <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
+                            <button class="btn btn-outline-secondary px-4 rounded-pill" @onclick="CloseUserModal" disabled="@isSaving">Hủy</button>
+                            <button class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" @onclick="SaveUserAsync" disabled="@isSaving">
                                 @(isSaving ? "Đang lưu..." : "Lưu")
                             </button>
                         </div>
@@ -217,26 +221,49 @@
 
         @if (showResetPasswordModal)
         {
-            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);">
+            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow rounded-4">
-                        <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title fw-bold text-warning">Đặt lại mật khẩu</h5>
-                            <button type="button" class="btn-close" @onclick="CloseResetPasswordModal"></button>
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-warning text-white rounded-top-4 border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-key me-2"></i>Đặt lại mật khẩu</h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CloseResetPasswordModal"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body p-4 bg-light">
                             @if (!string.IsNullOrWhiteSpace(passwordModalErrorMessage))
                             {
                                 <div class="alert alert-danger py-2">@passwordModalErrorMessage</div>
                             }
                             <div class="small text-muted mb-2">User: <span class="fw-semibold">@selectedUserNameForPassword</span></div>
-                            <label class="form-label small text-muted">Mật khẩu mới</label>
-                            <input class="form-control" type="password" @bind="newPassword" />
+                            <label class="form-label fw-bold text-dark">Mật khẩu mới</label>
+                            <input class="form-control shadow-sm border-0" type="password" @bind="newPassword" />
                         </div>
-                        <div class="modal-footer border-0 pt-0">
-                            <button class="btn btn-light border" @onclick="CloseResetPasswordModal" disabled="@isSavingPassword">Hủy</button>
-                            <button class="btn btn-warning text-white" @onclick="SaveNewPasswordAsync" disabled="@isSavingPassword">
+                        <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
+                            <button class="btn btn-outline-secondary px-4 rounded-pill" @onclick="CloseResetPasswordModal" disabled="@isSavingPassword">Hủy</button>
+                            <button class="btn btn-warning text-white px-4 rounded-pill shadow-sm fw-bold" @onclick="SaveNewPasswordAsync" disabled="@isSavingPassword">
                                 @(isSavingPassword ? "Đang cập nhật..." : "Cập nhật mật khẩu")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (showDeleteUserModal)
+        {
+            <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-danger text-white rounded-top-4 border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>Xác nhận xóa user</h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteUserModal"></button>
+                        </div>
+                        <div class="modal-body p-4 bg-light">
+                            <p class="mb-0">Bạn có chắc muốn xóa user <span class="fw-bold text-danger">@selectedUserNameForDelete</span> không?</p>
+                        </div>
+                        <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
+                            <button class="btn btn-outline-secondary px-4 rounded-pill" @onclick="CloseDeleteUserModal" disabled="@isDeletingUser">Hủy</button>
+                            <button class="btn btn-danger px-4 rounded-pill shadow-sm fw-bold" @onclick="DeleteUserAsync" disabled="@isDeletingUser">
+                                @(isDeletingUser ? "Đang xóa..." : "Xóa ngay")
                             </button>
                         </div>
                     </div>
@@ -276,6 +303,10 @@
     private int? selectedUserIdForPassword;
     private string selectedUserNameForPassword = string.Empty;
     private string newPassword = string.Empty;
+    private bool showDeleteUserModal;
+    private bool isDeletingUser;
+    private int? selectedUserIdForDelete;
+    private string selectedUserNameForDelete = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -585,7 +616,7 @@
         }
     }
 
-    private async Task DeleteUserAsync(UserItem user)
+    private void OpenDeleteUserModal(UserItem user)
     {
         if (!CanManageUser(user))
         {
@@ -593,16 +624,34 @@
             return;
         }
 
-        if (!await ConfirmAsync($"Xóa user {user.UserName}?"))
+        selectedUserIdForDelete = user.UserId;
+        selectedUserNameForDelete = user.UserName;
+        showDeleteUserModal = true;
+    }
+
+    private void CloseDeleteUserModal()
+    {
+        showDeleteUserModal = false;
+        selectedUserIdForDelete = null;
+        selectedUserNameForDelete = string.Empty;
+    }
+
+    private async Task DeleteUserAsync()
+    {
+        if (!selectedUserIdForDelete.HasValue || isDeletingUser)
         {
             return;
         }
 
         try
         {
-            var response = await Http.DeleteAsync($"api/users/{user.UserId}");
+            isDeletingUser = true;
+            var deletingUserName = selectedUserNameForDelete;
+            var response = await Http.DeleteAsync($"api/users/{selectedUserIdForDelete.Value}");
             if (response.IsSuccessStatusCode)
             {
+                CloseDeleteUserModal();
+                await ShowSuccessAsync("Đã xóa!", $"Đã xóa user {deletingUserName}.");
                 await LoadUsersAsync();
             }
             else
@@ -621,17 +670,20 @@
         {
             errorMessage = $"Không thể xóa user: {ex.Message}";
         }
+        finally
+        {
+            isDeletingUser = false;
+        }
     }
 
-    private async Task<bool> ConfirmAsync(string message)
+    private async Task ShowSuccessAsync(string title, string message)
     {
         try
         {
-            return await JS.InvokeAsync<bool>("confirm", message);
+            await JS.InvokeVoidAsync("showSuccessMessage", title, message);
         }
         catch
         {
-            return true;
         }
     }
 
