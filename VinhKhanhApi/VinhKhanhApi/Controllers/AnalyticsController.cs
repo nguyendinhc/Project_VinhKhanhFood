@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using VinhKhanhApi.Models;
 
 namespace VinhKhanhApi.Controllers
@@ -116,6 +117,49 @@ namespace VinhKhanhApi.Controllers
             return Ok(dashboard);
         }
 
+        [HttpGet("owner-dashboard")]
+        [Authorize(Roles = "Owner")]
+        public async Task<ActionResult<OwnerDashboardStatsDto>> GetOwnerDashboardAsync()
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                return Forbid();
+            }
+
+            var ownerPoiIds = await _context.PoiSubmissions
+                .AsNoTracking()
+                .Where(s => s.UserId == userId && s.Poiid != null)
+                .Select(s => s.Poiid!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            if (ownerPoiIds.Count == 0)
+            {
+                return Ok(new OwnerDashboardStatsDto());
+            }
+
+            var activeMenus = await _context.Menus
+                .AsNoTracking()
+                .CountAsync(m => m.Poiid.HasValue && ownerPoiIds.Contains(m.Poiid.Value));
+
+            var today = DateTime.Today;
+            var todayVisits = await _context.VisitLogs
+                .AsNoTracking()
+                .CountAsync(v =>
+                    v.Poiid.HasValue
+                    && ownerPoiIds.Contains(v.Poiid.Value)
+                    && v.VisitTime.HasValue
+                    && v.VisitTime.Value.Date == today);
+
+            return Ok(new OwnerDashboardStatsDto
+            {
+                TotalPois = ownerPoiIds.Count,
+                ActiveMenus = activeMenus,
+                TodayVisits = todayVisits
+            });
+        }
+
         public class AnalyticsDashboardDto
         {
             public int TotalPois { get; set; }
@@ -152,6 +196,13 @@ namespace VinhKhanhApi.Controllers
             public string PoiName { get; set; } = string.Empty;
             public bool HasMenu { get; set; }
             public bool HasThumbnail { get; set; }
+        }
+
+        public class OwnerDashboardStatsDto
+        {
+            public int TotalPois { get; set; }
+            public int ActiveMenus { get; set; }
+            public int TodayVisits { get; set; }
         }
 
     }

@@ -1,8 +1,10 @@
 ﻿@page "/owner-dashboard"
 @attribute [Authorize(Roles = "Owner")]
 @using Microsoft.AspNetCore.Authorization
+@using System.Globalization
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IJSRuntime JS
+@inject HttpClient Http
 
 <PageTitle>Bảng điều khiển chủ quán</PageTitle>
 
@@ -22,8 +24,8 @@
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
                     <div class="small text-muted">Món đang kinh doanh</div>
-                    <div class="fs-2 fw-bold text-primary">24</div>
-                    <div class="small text-success">+2 món tuần này</div>
+                    <div class="fs-2 fw-bold text-primary">@activeMenus.ToString("N0")</div>
+                    <div class="small text-muted">Tổng số món thuộc các quán của bạn</div>
                 </div>
             </div>
         </div>
@@ -31,19 +33,43 @@
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
                     <div class="small text-muted">Lượt xem quán hôm nay</div>
-                    <div class="fs-2 fw-bold text-info">186</div>
-                    <div class="small text-muted">Dữ liệu realtime</div>
+                    <div class="fs-2 fw-bold text-info">@todayVisits.ToString("N0")</div>
+                    <div class="small text-muted">Theo dữ liệu ghi nhận hôm nay</div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
-                    <div class="small text-muted">Yêu cầu cần xử lý</div>
-                    <div class="fs-2 fw-bold text-danger">3</div>
-                    <div class="small text-muted">Cập nhật menu / phản hồi</div>
+                    <div class="small text-muted">Số lượng quán hiện có</div>
+                    <div class="fs-2 fw-bold text-warning">@ownerTotalPois.ToString("N0")</div>
+                    <div class="small text-muted">Quán thuộc tài khoản của bạn</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-body">
+            <h5 class="fw-bold mb-3"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Vị trí quán</h5>
+
+            @if (!string.IsNullOrWhiteSpace(locationError))
+            {
+                <div class="alert alert-warning mb-0">@locationError</div>
+            }
+            else if (mapUrl is null)
+            {
+                <div class="text-muted">Chưa có dữ liệu vị trí quán.</div>
+            }
+            else
+            {
+                <div class="ratio ratio-16x9 rounded-4 overflow-hidden border" @onwheel:preventDefault="true">
+                    <iframe src="@mapUrl" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+                <div class="small text-muted mt-2">
+                    Hiển thị @totalPoisOnMap quán: @poiNamesText
+                </div>
+            }
         </div>
     </div>
 
@@ -57,9 +83,6 @@
                 <a href="/menus" class="btn btn-primary rounded-pill px-3">
                     <i class="bi bi-journal-text me-1"></i> Quản lý menu
                 </a>
-                <button class="btn btn-outline-secondary rounded-pill px-3" disabled>
-                    <i class="bi bi-shop me-1"></i> Cập nhật thông tin quán (sắp có)
-                </button>
             </div>
         </div>
     </div>
@@ -69,10 +92,18 @@
     .owner-dashboard {
         font-family: 'Be Vietnam Pro', 'Segoe UI', 'Noto Sans', Arial, sans-serif;
     }
+
 </style>
 
 @code {
     private string displayName = "Owner";
+    private string? mapUrl;
+    private int ownerTotalPois;
+    private int activeMenus;
+    private int todayVisits;
+    private int totalPoisOnMap;
+    private string poiNamesText = "-";
+    private string locationError = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,13 +111,74 @@
         if (!string.IsNullOrWhiteSpace(name))
         {
             displayName = name;
-            return;
+        }
+        else
+        {
+            var sessionName = await JS.InvokeAsync<string>("sessionStorage.getItem", "displayName");
+            if (!string.IsNullOrWhiteSpace(sessionName))
+            {
+                displayName = sessionName;
+            }
         }
 
-        var sessionName = await JS.InvokeAsync<string>("sessionStorage.getItem", "displayName");
-        if (!string.IsNullOrWhiteSpace(sessionName))
+        await Task.WhenAll(LoadOwnerLocationAsync(), LoadOwnerStatsAsync());
+    }
+
+    private async Task LoadOwnerStatsAsync()
+    {
+        try
         {
-            displayName = sessionName;
+            var stats = await Http.GetFromJsonAsync<OwnerDashboardStats>("api/analytics/owner-dashboard") ?? new OwnerDashboardStats();
+            ownerTotalPois = stats.TotalPois;
+            activeMenus = stats.ActiveMenus;
+            todayVisits = stats.TodayVisits;
         }
+        catch
+        {
+            ownerTotalPois = 0;
+            activeMenus = 0;
+            todayVisits = 0;
+        }
+    }
+
+    private async Task LoadOwnerLocationAsync()
+    {
+        try
+        {
+            locationError = string.Empty;
+            var pois = await Http.GetFromJsonAsync<List<OwnerPoi>>("api/pois/owner") ?? new List<OwnerPoi>();
+            if (pois.Count == 0)
+            {
+                mapUrl = null;
+                return;
+            }
+
+            totalPoisOnMap = pois.Count;
+            poiNamesText = string.Join(", ", pois.Select(x => x.Name));
+
+            var points = string.Join("|", pois.Select(x =>
+                $"{x.Latitude.ToString("0.######", CultureInfo.InvariantCulture)},{x.Longitude.ToString("0.######", CultureInfo.InvariantCulture)}"));
+
+            mapUrl = $"https://maps.google.com/maps?q={Uri.EscapeDataString(points)}&z=15&output=embed";
+        }
+        catch (Exception ex)
+        {
+            mapUrl = null;
+            locationError = $"Không thể tải vị trí quán: {ex.Message}";
+        }
+    }
+
+    public class OwnerPoi
+    {
+        public string Name { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+    public class OwnerDashboardStats
+    {
+        public int TotalPois { get; set; }
+        public int ActiveMenus { get; set; }
+        public int TodayVisits { get; set; }
     }
 }

@@ -2,8 +2,10 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
-<PageTitle>Tổng quan hệ thống - VinhKhanhAdmin</PageTitle>
+<PageTitle>Tổng quan hê thống - VinhKhanhAdmin</PageTitle>
 
 <div class="container-fluid p-0">
     @if (showWelcomePopup)
@@ -21,13 +23,29 @@
             <h2 class="fw-bold text-dark m-0">@GetTimeGreeting(), <span class="text-primary">@displayName</span>! 👋</h2>
             <p class="text-muted m-0">Đây là tổng quan tình hình hệ thống hôm nay.</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
             <button class="btn btn-white border shadow-sm rounded-pill px-3">
                 <i class="bi bi-calendar-event me-2 text-secondary"></i> @DateTime.Now.ToString("dd/MM/yyyy")
+            </button>
+            <button class="btn btn-outline-primary rounded-pill" @onclick="() => LoadHomeDataAsync()" disabled="@isLoading">
+                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
             </button>
         </div>
     </div>
 
+    @if (isLoading)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Đang tải dữ liệu trang chủ...</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger mt-3">@errorMessage</div>
+    }
+    else
+    {
     <div class="row g-4 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
@@ -37,8 +55,8 @@
                     </div>
                     <div>
                         <h6 class="text-muted mb-1 fw-semibold">Tổng Địa Điểm</h6>
-                        <h2 class="fw-bold mb-0">156</h2>
-                        <small class="text-success fw-bold"><i class="bi bi-arrow-up-short"></i> +12 tuần này</small>
+                        <h2 class="fw-bold mb-0">@homeStats.TotalPois.ToString("N0")</h2>
+                        <small class="text-muted">@homeStats.ActivePois hoạt động • @homeStats.PendingPois chờ duyệt</small>
                     </div>
                 </div>
             </div>
@@ -52,8 +70,8 @@
                     </div>
                     <div>
                         <h6 class="text-dark-emphasis mb-1 fw-semibold">Chờ Phê Duyệt</h6>
-                        <h2 class="fw-bold mb-0 text-dark-emphasis">5</h2>
-                        <small class="text-dark-emphasis">Cần xử lý ngay</small>
+                        <h2 class="fw-bold mb-0 text-dark-emphasis">@homeStats.PendingSubmissions.ToString("N0")</h2>
+                        <small class="text-dark-emphasis">Từ yêu cầu đăng ký/cập nhật</small>
                     </div>
                 </div>
             </div>
@@ -67,8 +85,8 @@
                     </div>
                     <div>
                         <h6 class="text-muted mb-1 fw-semibold">Tổng Users</h6>
-                        <h2 class="fw-bold mb-0">2,450</h2>
-                        <small class="text-success fw-bold"><i class="bi bi-arrow-up-short"></i> +5% tháng qua</small>
+                        <h2 class="fw-bold mb-0">@homeStats.TotalUsers.ToString("N0")</h2>
+                        <small class="text-muted">Admin: @homeStats.AdminUsers • Owner: @homeStats.OwnerUsers</small>
                     </div>
                 </div>
             </div>
@@ -81,9 +99,9 @@
                         <i class="bi bi-cpu-fill fs-3"></i>
                     </div>
                     <div>
-                        <h6 class="text-muted mb-1 fw-semibold">Yêu cầu AI hôm nay</h6>
-                        <h2 class="fw-bold mb-0">89</h2>
-                        <small class="text-muted">Gemini 2.0 Flash</small>
+                        <h6 class="text-muted mb-1 fw-semibold">Lượt ghé thăm hôm nay</h6>
+                        <h2 class="fw-bold mb-0">@homeStats.TodayVisits.ToString("N0")</h2>
+                        <small class="text-muted">Tổng lượt ghé thăm: @homeStats.TotalVisits.ToString("N0")</small>
                     </div>
                 </div>
             </div>
@@ -95,43 +113,39 @@
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-0 py-3 rounded-top-4 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-primary"></i>Hoạt động gần đây</h5>
-                    <a href="/dashboard" class="btn btn-sm btn-light rounded-pill px-3">Xem tất cả</a>
+                    <a href="/logs" class="btn btn-sm btn-light rounded-pill px-3">Xem tất cả</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="ps-4">Đối tượng</th>
+                                <th class="ps-4">ID</th>
                                 <th>Hành động</th>
                                 <th>Người thực hiện</th>
                                 <th>Thời gian</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td class="ps-4 fw-bold text-primary">Ốc Oanh</td>
-                                <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Thêm mới</span></td>
-                                <td>Admin Cường</td>
-                                <td class="text-muted small">10 phút trước</td>
-                            </tr>
-                            <tr>
-                                <td class="ps-4 fw-bold text-primary">Chủ quán: Nguyễn Văn A</td>
-                                <td><span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Đăng ký mới</span></td>
-                                <td>Hệ thống</td>
-                                <td class="text-muted small">35 phút trước</td>
-                            </tr>
-                            <tr>
-                                <td class="ps-4 fw-bold text-primary">Ốc Vũ</td>
-                                <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Xóa bỏ</span></td>
-                                <td>Admin Cường</td>
-                                <td class="text-muted small">1 giờ trước</td>
-                            </tr>
-                            <tr>
-                                <td class="ps-4 fw-bold text-primary">Menu Quán Lạ</td>
-                                <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Cập nhật AI</span></td>
-                                <td>Owner (ID: 55)</td>
-                                <td class="text-muted small">2 giờ trước</td>
-                            </tr>
+                            @if (recentLogs.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">Chưa có hoạt động gần đây.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var log in recentLogs)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-primary">#@log.LogId</td>
+                                        <td>
+                                            <span class="badge rounded-pill @GetActionBadgeClass(log.Action)">@(string.IsNullOrWhiteSpace(log.Action) ? "-" : log.Action)</span>
+                                        </td>
+                                        <td>@(string.IsNullOrWhiteSpace(log.FullName) ? (log.UserName ?? "Hệ thống") : $"{log.FullName} ({log.UserName})")</td>
+                                        <td class="text-muted small">@(log.Timestamp?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                    </tr>
+                                }
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -143,12 +157,13 @@
                 <div class="card-body p-5 text-center d-flex flex-column justify-content-center align-items-center">
                     <i class="bi bi-rocket-takeoff-fill display-3 mb-4"></i>
                     <h4 class="fw-bold">Hệ thống đang hoạt động tốt!</h4>
-                    <p class="opacity-75">Tất cả các dịch vụ API và AI Advisor đang vận hành ổn định.</p>
+                    <p class="opacity-75">Lần ghi nhận hoạt động gần nhất: @(homeStats.LatestActivityTime?.ToString("dd/MM/yyyy HH:mm") ?? "chưa có")</p>
                     <button class="btn btn-light text-primary rounded-pill px-4 mt-3 fw-bold shadow-sm">Kiểm tra trạng thái</button>
                 </div>
             </div>
         </div>
     </div>
+    }
 </div>
 
 <style>
@@ -245,20 +260,70 @@
 @code {
     private string displayName = "Admin";
     private bool showWelcomePopup;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private HomeStats homeStats = new();
+    private List<AuditLogItem> recentLogs = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Lấy tên người dùng từ LocalStorage để chào hỏi
-        var name = await LocalStorage.GetItemAsStringAsync("displayName");
-        if (!string.IsNullOrWhiteSpace(name))
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadHomeDataAsync(int retryRemaining = 2)
+    {
+        try
         {
-            displayName = name;
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var analyticsTask = Http.GetFromJsonAsync<AnalyticsDashboard>("api/analytics/dashboard");
+            var usersTask = Http.GetFromJsonAsync<UserPagedResult>("api/users?page=1&pageSize=1");
+            var logsTask = Http.GetFromJsonAsync<AuditLogPagedResult>("api/audit-logs?page=1&pageSize=4");
+
+            await Task.WhenAll(analyticsTask!, usersTask!, logsTask!);
+
+            var analytics = analyticsTask.Result ?? new AnalyticsDashboard();
+            var users = usersTask.Result ?? new UserPagedResult();
+            var logs = logsTask.Result ?? new AuditLogPagedResult();
+
+            recentLogs = logs.Items ?? new List<AuditLogItem>();
+            homeStats = new HomeStats
+            {
+                TotalPois = analytics.TotalPois,
+                ActivePois = analytics.ActivePois,
+                PendingPois = analytics.PendingPois,
+                PendingSubmissions = analytics.PendingSubmissions,
+                TotalVisits = analytics.TotalVisits,
+                TodayVisits = analytics.VisitsTrend?.FirstOrDefault(x => x.Date.Date == DateTime.Today)?.TotalVisits ?? 0,
+                TotalUsers = users.Summary.TotalUsers,
+                AdminUsers = users.Summary.AdminCount,
+                OwnerUsers = users.Summary.OwnerCount,
+                LatestActivityTime = logs.Summary.LatestTimestamp
+            };
         }
-        else
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
-            // Fallback nếu chưa có tên
-            var state = await JS.InvokeAsync<string>("sessionStorage.getItem", "displayName");
-            if (!string.IsNullOrWhiteSpace(state)) displayName = state;
+            if (retryRemaining > 0)
+            {
+                await Task.Delay(350);
+                await LoadHomeDataAsync(retryRemaining - 1);
+                return;
+            }
+
+            await LocalStorage.RemoveItemAsync("authToken");
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải dữ liệu trang chủ: {ex.Message}";
+            homeStats = new HomeStats();
+            recentLogs = new List<AuditLogItem>();
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
@@ -269,9 +334,32 @@
             return;
         }
 
+        try
+        {
+            var name = await LocalStorage.GetItemAsStringAsync("displayName");
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                displayName = name;
+            }
+            else
+            {
+                var state = await JS.InvokeAsync<string>("sessionStorage.getItem", "displayName");
+                if (!string.IsNullOrWhiteSpace(state))
+                {
+                    displayName = state;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        await LoadHomeDataAsync();
+
         var shouldShowPopup = await JS.InvokeAsync<string>("sessionStorage.getItem", "showLoginSuccessPopup");
         if (!string.Equals(shouldShowPopup, "1", StringComparison.Ordinal))
         {
+            StateHasChanged();
             return;
         }
 
@@ -296,5 +384,93 @@
         if (hour < 12) return "Chào buổi sáng";
         if (hour < 18) return "Chào buổi chiều";
         return "Chào buổi tối";
+    }
+
+    private static string GetActionBadgeClass(string? action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            return "bg-secondary-subtle text-secondary border border-secondary-subtle";
+        }
+
+        var normalized = action.ToLowerInvariant();
+        if (normalized.Contains("xóa") || normalized.Contains("delete"))
+        {
+            return "bg-danger-subtle text-danger border border-danger-subtle";
+        }
+
+        if (normalized.Contains("thêm") || normalized.Contains("create") || normalized.Contains("đăng ký"))
+        {
+            return "bg-success-subtle text-success border border-success-subtle";
+        }
+
+        if (normalized.Contains("cập nhật") || normalized.Contains("update"))
+        {
+            return "bg-info-subtle text-info border border-info-subtle";
+        }
+
+        return "bg-warning-subtle text-warning border border-warning-subtle";
+    }
+
+    public class HomeStats
+    {
+        public int TotalPois { get; set; }
+        public int ActivePois { get; set; }
+        public int PendingPois { get; set; }
+        public int PendingSubmissions { get; set; }
+        public int TotalUsers { get; set; }
+        public int AdminUsers { get; set; }
+        public int OwnerUsers { get; set; }
+        public int TotalVisits { get; set; }
+        public int TodayVisits { get; set; }
+        public DateTime? LatestActivityTime { get; set; }
+    }
+
+    public class AnalyticsDashboard
+    {
+        public int TotalPois { get; set; }
+        public int ActivePois { get; set; }
+        public int PendingPois { get; set; }
+        public int PendingSubmissions { get; set; }
+        public int TotalVisits { get; set; }
+        public List<VisitsTrendItem> VisitsTrend { get; set; } = new();
+    }
+
+    public class VisitsTrendItem
+    {
+        public DateTime Date { get; set; }
+        public int TotalVisits { get; set; }
+    }
+
+    public class UserPagedResult
+    {
+        public UserSummary Summary { get; set; } = new();
+    }
+
+    public class UserSummary
+    {
+        public int TotalUsers { get; set; }
+        public int AdminCount { get; set; }
+        public int OwnerCount { get; set; }
+    }
+
+    public class AuditLogPagedResult
+    {
+        public List<AuditLogItem> Items { get; set; } = new();
+        public AuditLogSummary Summary { get; set; } = new();
+    }
+
+    public class AuditLogSummary
+    {
+        public DateTime? LatestTimestamp { get; set; }
+    }
+
+    public class AuditLogItem
+    {
+        public int LogId { get; set; }
+        public string? UserName { get; set; }
+        public string? FullName { get; set; }
+        public string? Action { get; set; }
+        public DateTime? Timestamp { get; set; }
     }
 }
