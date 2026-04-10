@@ -63,11 +63,20 @@
             }
             else
             {
-                <div class="ratio ratio-16x9 rounded-4 overflow-hidden border" @onwheel:preventDefault="true">
+                <div class="owner-map-frame rounded-4 overflow-hidden border" @onwheel:preventDefault="true">
                     <iframe src="@mapUrl" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
                 <div class="small text-muted mt-2">
-                    Hiển thị @totalPoisOnMap quán: @poiNamesText
+                    Đang hiển thị vị trí: <b>@selectedPoiName</b> • Tổng @totalPoisOnMap quán
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    @foreach (var poi in ownerPois)
+                    {
+                        <button class="btn btn-sm rounded-pill @(selectedPoiId == poi.Poiid ? "btn-danger" : "btn-outline-danger")"
+                                @onclick="() => SelectPoi(poi)">
+                            <i class="bi bi-geo-alt-fill me-1"></i>@poi.Name
+                        </button>
+                    }
                 </div>
             }
         </div>
@@ -93,6 +102,16 @@
         font-family: 'Be Vietnam Pro', 'Segoe UI', 'Noto Sans', Arial, sans-serif;
     }
 
+    .owner-map-frame {
+        height: 420px;
+    }
+
+        .owner-map-frame iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
 </style>
 
 @code {
@@ -102,7 +121,9 @@
     private int activeMenus;
     private int todayVisits;
     private int totalPoisOnMap;
-    private string poiNamesText = "-";
+    private readonly List<OwnerPoi> ownerPois = new();
+    private int? selectedPoiId;
+    private string selectedPoiName = "-";
     private string locationError = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -150,26 +171,38 @@
             if (pois.Count == 0)
             {
                 mapUrl = null;
+                ownerPois.Clear();
+                selectedPoiId = null;
+                selectedPoiName = "-";
                 return;
             }
 
             totalPoisOnMap = pois.Count;
-            poiNamesText = string.Join(", ", pois.Select(x => x.Name));
-
-            var points = string.Join("|", pois.Select(x =>
-                $"{x.Latitude.ToString("0.######", CultureInfo.InvariantCulture)},{x.Longitude.ToString("0.######", CultureInfo.InvariantCulture)}"));
-
-            mapUrl = $"https://maps.google.com/maps?q={Uri.EscapeDataString(points)}&z=15&output=embed";
+            ownerPois.Clear();
+            ownerPois.AddRange(pois);
+            SelectPoi(ownerPois[0]);
         }
         catch (Exception ex)
         {
             mapUrl = null;
+            ownerPois.Clear();
             locationError = $"Không thể tải vị trí quán: {ex.Message}";
         }
     }
 
+    private void SelectPoi(OwnerPoi poi)
+    {
+        selectedPoiId = poi.Poiid;
+        selectedPoiName = poi.Name;
+
+        var lat = poi.Latitude.ToString("0.######", CultureInfo.InvariantCulture);
+        var lng = poi.Longitude.ToString("0.######", CultureInfo.InvariantCulture);
+        mapUrl = $"https://maps.google.com/maps?output=embed&z=16&q={Uri.EscapeDataString($"{lat},{lng}")}";
+    }
+
     public class OwnerPoi
     {
+        public int Poiid { get; set; }
         public string Name { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
@@ -181,4 +214,5 @@
         public int ActiveMenus { get; set; }
         public int TodayVisits { get; set; }
     }
+
 }
