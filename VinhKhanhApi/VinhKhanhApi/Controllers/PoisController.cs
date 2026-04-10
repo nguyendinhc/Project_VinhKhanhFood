@@ -60,6 +60,7 @@ namespace VinhKhanhApi.Controllers
             }
 
             NormalizePoiThumbnail(poi);
+            NormalizeMenuImages(poi);
 
             return poi;
         }
@@ -79,6 +80,7 @@ namespace VinhKhanhApi.Controllers
             }
 
             NormalizePoiThumbnail(poi);
+            NormalizeMenuImages(poi);
 
             return Ok(poi);
         }
@@ -416,8 +418,13 @@ namespace VinhKhanhApi.Controllers
                 return;
             }
 
-            if (Uri.TryCreate(poi.Thumbnail, UriKind.Absolute, out _))
+            if (Uri.TryCreate(poi.Thumbnail, UriKind.Absolute, out var absoluteThumbnailUri))
             {
+                if (IsLoopbackHost(absoluteThumbnailUri.Host))
+                {
+                    poi.Thumbnail = $"{Request.Scheme}://{Request.Host}{absoluteThumbnailUri.PathAndQuery}";
+                }
+
                 return;
             }
 
@@ -429,6 +436,45 @@ namespace VinhKhanhApi.Controllers
 
             poi.Thumbnail = $"{Request.Scheme}://{Request.Host}{thumbnailPath}";
         }
+
+        private void NormalizeMenuImages(Poi poi)
+        {
+            if (poi.Menus == null || poi.Menus.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var menu in poi.Menus)
+            {
+                if (string.IsNullOrWhiteSpace(menu.Image))
+                {
+                    continue;
+                }
+
+                if (Uri.TryCreate(menu.Image, UriKind.Absolute, out var absoluteImageUri))
+                {
+                    if (IsLoopbackHost(absoluteImageUri.Host))
+                    {
+                        menu.Image = $"{Request.Scheme}://{Request.Host}{absoluteImageUri.PathAndQuery}";
+                    }
+
+                    continue;
+                }
+
+                var imagePath = menu.Image.Trim().Replace('\\', '/');
+                if (!imagePath.StartsWith('/'))
+                {
+                    imagePath = "/" + imagePath.TrimStart('~', '/');
+                }
+
+                menu.Image = $"{Request.Scheme}://{Request.Host}{imagePath}";
+            }
+        }
+
+        private static bool IsLoopbackHost(string host)
+            => string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsActiveStatus(string? status)
             => string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase)

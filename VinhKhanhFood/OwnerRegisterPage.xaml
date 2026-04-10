@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="VinhKhanhFood.OwnerRegisterPage"
-             Title="Dang ky Chu quan"
+             Title="Đăng ký Chủ quán"
              BackgroundColor="#F8FAFC">
     <ScrollView>
         <VerticalStackLayout Spacing="0">
@@ -14,8 +14,8 @@
                     </LinearGradientBrush>
                 </Grid.Background>
                 <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="4">
-                    <Label Text="DANG KY CHU QUAN" FontAttributes="Bold" FontSize="22" TextColor="#9A3412" HorizontalOptions="Center" />
-                    <Label Text="Gui thong tin de Admin xet duyet" FontSize="12" TextColor="#C2410C" HorizontalOptions="Center" />
+                    <Label Text="ĐĂNG KÝ CHỦ QUÁN" FontAttributes="Bold" FontSize="22" TextColor="#9A3412" HorizontalOptions="Center" />
+                    <Label Text="Gửi thông tin để Admin xét duyệt" FontSize="12" TextColor="#C2410C" HorizontalOptions="Center" />
                 </VerticalStackLayout>
             </Grid>
 
@@ -25,20 +25,20 @@
                    BackgroundColor="White"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="Thong tin tai khoan" FontAttributes="Bold" FontSize="17" TextColor="#0F172A" />
+                    <Label Text="Thông tin tài khoản" FontAttributes="Bold" FontSize="17" TextColor="#0F172A" />
 
-                    <Entry x:Name="entryUserName" Placeholder="Ten dang nhap" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
-                    <Entry x:Name="entryPassword" Placeholder="Mat khau" IsPassword="True" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
-                    <Entry x:Name="entryConfirmPassword" Placeholder="Nhap lai mat khau" IsPassword="True" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Entry x:Name="entryUserName" Placeholder="Tên đăng nhập" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Entry x:Name="entryPassword" Placeholder="Mật khẩu" IsPassword="True" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Entry x:Name="entryConfirmPassword" Placeholder="Nhập lại mật khẩu" IsPassword="True" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
 
-                    <Label Text="Thong tin lien he" FontAttributes="Bold" FontSize="17" TextColor="#0F172A" Margin="0,8,0,0" />
-                    <Entry x:Name="entryFullName" Placeholder="Ho va ten" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
+                    <Label Text="Thông tin liên hệ" FontAttributes="Bold" FontSize="17" TextColor="#0F172A" Margin="0,8,0,0" />
+                    <Entry x:Name="entryFullName" Placeholder="Họ và tên" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
                     <Entry x:Name="entryEmail" Placeholder="Email" Keyboard="Email" BackgroundColor="#F8FAFC" TextColor="#0F172A" />
 
                     <Label x:Name="lblError" IsVisible="False" TextColor="#DC2626" FontAttributes="Bold" FontSize="12" HorizontalOptions="Center" />
 
                     <Button x:Name="btnSubmit"
-                            Text="GUI DANG KY"
+                            Text="GỬI ĐĂNG KÝ"
                             BackgroundColor="#EA580C"
                             TextColor="White"
                             CornerRadius="14"

@@ -39,7 +39,7 @@ public partial class DetailPage : ContentPage
             return;
         }
 
-        if (_poi.Menus != null && _poi.Menus.Any())
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet && _poi.Menus != null && _poi.Menus.Any())
         {
             return;
         }

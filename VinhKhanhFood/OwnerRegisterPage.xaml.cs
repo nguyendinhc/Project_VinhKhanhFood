@@ -1,4 +1,6 @@
-using VinhKhanhFood.Services;
+﻿using VinhKhanhFood.Services;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 
 namespace VinhKhanhFood;
 
@@ -29,19 +31,19 @@ public partial class OwnerRegisterPage : ContentPage
 
         if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
         {
-            ShowError("Vui l�ng nh?p t�n ??ng nh?p v� m?t kh?u.");
+            ShowError("Vui lòng nhập tên đăng nhập và mật khẩu.");
             return;
         }
 
         if (password.Length < 6)
         {
-            ShowError("M?t kh?u c?n t?i thi?u 6 k� t?.");
+            ShowError("Mật khẩu cần tối thiểu 6 ký tự.");
             return;
         }
 
         if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
         {
-            ShowError("M?t kh?u nh?p l?i kh�ng kh?p.");
+            ShowError("Mật khẩu nhập lại không khớp.");
             return;
         }
 
@@ -49,12 +51,12 @@ public partial class OwnerRegisterPage : ContentPage
         try
         {
             await _apiService.RegisterOwnerRequestAsync(userName, password, fullName, email);
-            await DisplayAlert("Th�nh c�ng", "?� g?i ??ng k�. Vui l�ng ch? Admin duy?t v� g�n quy?n Ch? qu�n.", "OK");
+            await DisplayAlert("Thành công", "Đã gửi đăng ký. Vui lòng chờ Admin duyệt và gán quyền Chủ quán.", "OK");
             await Navigation.PopAsync();
         }
         catch (Exception ex)
         {
-            ShowError(string.IsNullOrWhiteSpace(ex.Message) ? "Kh�ng th? g?i ??ng k�." : ex.Message);
+            ShowError(string.IsNullOrWhiteSpace(ex.Message) ? "Không thể gửi đăng ký." : ex.Message);
         }
         finally
         {
