@@ -271,7 +271,10 @@ namespace VinhKhanhFood
 
         private async void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
         {
-            if (e.Source != ShellNavigationSource.ShellItemChanged)
+            var isTabSwitch = e.Source == ShellNavigationSource.ShellItemChanged
+                              || e.Source == ShellNavigationSource.ShellSectionChanged
+                              || e.Source == ShellNavigationSource.ShellContentChanged;
+            if (!isTabSwitch)
             {
                 return;
             }
@@ -279,9 +282,10 @@ namespace VinhKhanhFood
             var location = CurrentState?.Location?.OriginalString ?? string.Empty;
             if (location.StartsWith("//scanqr", StringComparison.OrdinalIgnoreCase))
             {
-                if (Navigation.NavigationStack.Count > 1)
+                var scanNavigation = CurrentItem?.CurrentItem?.Navigation ?? Navigation;
+                if (scanNavigation.NavigationStack.Count > 1)
                 {
-                    await Navigation.PopToRootAsync();
+                    await scanNavigation.PopToRootAsync();
                 }
             }
         }
