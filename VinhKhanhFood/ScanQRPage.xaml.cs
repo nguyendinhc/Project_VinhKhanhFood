@@ -196,22 +196,24 @@ public partial class ScanQRPage : ContentPage
         }
 
         _isHandlingScan = true;
-        if (_barcodeReader != null)
-        {
-            _barcodeReader.IsDetecting = false;
-            _barcodeReader.IsEnabled = false;
-            _barcodeReader.IsVisible = false;
-            _barcodeReader.IsTorchOn = false;
-        }
-        _isTorchOn = false;
-        btnTorch.Text = "Bật đèn";
         var rawValue = result.Value?.Trim() ?? string.Empty;
-        lblScanStatus.Text = $"Đã đọc mã: {rawValue}";
 
         MainThread.BeginInvokeOnMainThread(async () =>
         {
             try
             {
+                if (_barcodeReader != null)
+                {
+                    _barcodeReader.IsDetecting = false;
+                    _barcodeReader.IsEnabled = false;
+                    _barcodeReader.IsVisible = false;
+                    _barcodeReader.IsTorchOn = false;
+                }
+
+                _isTorchOn = false;
+                btnTorch.Text = "Bật đèn";
+                lblScanStatus.Text = $"Đã đọc mã: {rawValue}";
+
                 if (_pois.Count == 0)
                 {
                     try

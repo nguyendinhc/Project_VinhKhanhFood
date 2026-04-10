@@ -8,7 +8,7 @@
                   AbsoluteLayout.LayoutBounds="0,0,1,1"
                   AbsoluteLayout.LayoutFlags="All" />
 
-        <Border AbsoluteLayout.LayoutBounds="0.5,0.06,0.92,-1"
+        <Border AbsoluteLayout.LayoutBounds="0.35,0.01,0.70,-1"
                 AbsoluteLayout.LayoutFlags="PositionProportional,WidthProportional"
                 Padding="14,8"
                 BackgroundColor="#FFF8F1"
@@ -21,7 +21,7 @@
                        TextColor="#2C2C2C"
                        PlaceholderColor="#A08A7A"
                        CancelButtonColor="#FF5722"
-                       HeightRequest="42"
+                       HeightRequest="30"
                        BackgroundColor="Transparent" />
         </Border>
 
