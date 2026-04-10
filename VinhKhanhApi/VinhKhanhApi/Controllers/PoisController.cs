@@ -172,17 +172,6 @@ namespace VinhKhanhApi.Controllers
                 return Forbid();
             }
 
-            var existingPoiId = await _context.PoiSubmissions
-                .AsNoTracking()
-                .Where(s => s.UserId == userId && s.Poiid != null)
-                .Select(s => s.Poiid)
-                .FirstOrDefaultAsync();
-
-            if (existingPoiId.HasValue)
-            {
-                return BadRequest("Chủ quán chỉ được tạo 1 quán. Vui lòng chỉnh sửa quán hiện tại.");
-            }
-
             if (request.Poiid.HasValue)
             {
                 var poi = await _context.Pois.FirstOrDefaultAsync(p => p.Poiid == request.Poiid.Value);
