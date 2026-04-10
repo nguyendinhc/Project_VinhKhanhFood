@@ -70,27 +70,28 @@ namespace VinhKhanhFood.Services
             return poi;
         }
 
-        public async Task<LoginResult?> LoginAsync(string username, string password)
+        public async Task TrackPoiVisitAsync(int poiId)
         {
-            var payload = new LoginRequest
+            if (poiId <= 0)
             {
-                Username = username,
-                Password = password
+                return;
+            }
+
+            var payload = new
+            {
+                Poiid = poiId,
+                DeviceId = GetOrCreateTrackingDeviceId()
             };
 
             var json = JsonConvert.SerializeObject(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(BaseApiUrl + "Auth/login-app", content);
+            var response = await _httpClient.PostAsync(BaseApiUrl + "VisitLogs", content);
+
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
-                    ? "Sai tài khoản hoặc mật khẩu."
-                    : error);
+                throw new HttpRequestException($"API lỗi {(int)response.StatusCode}: {error}");
             }
-
-            var resultJson = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<LoginResult>(resultJson);
         }
 
         public async Task RegisterOwnerRequestAsync(string username, string password, string? fullName, string? email)
@@ -250,6 +251,20 @@ namespace VinhKhanhFood.Services
             }
 
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        private static string GetOrCreateTrackingDeviceId()
+        {
+            const string key = "VisitTrackingDeviceId";
+            var existing = Preferences.Default.Get(key, string.Empty);
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                return existing;
+            }
+
+            var created = Guid.NewGuid().ToString("N");
+            Preferences.Default.Set(key, created);
+            return created;
         }
 
         private class UserLanguageRequest

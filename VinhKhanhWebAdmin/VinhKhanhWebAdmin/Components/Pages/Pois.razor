@@ -140,6 +140,37 @@
                                         <option value="Pending">Chờ duyệt (Pending)</option>
                                     </select>
                                 </div>
+
+                                <div class="col-12 mt-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-bold text-dark m-0">Mô tả (Tiếng Việt)</label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" @onclick="TranslateDescriptionsAsync" disabled="@isTranslatingDescriptions">
+                                            @if (isTranslatingDescriptions)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                            }
+                                            <i class="bi bi-translate me-1"></i>Dịch tự động 4 ngôn ngữ
+                                        </button>
+                                    </div>
+                                    <textarea class="form-control shadow-sm border-0" rows="3" @bind="localizationInput.DescriptionVi" placeholder="Nhập mô tả tiếng Việt..."></textarea>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Mô tả (English)</label>
+                                    <textarea class="form-control shadow-sm border-0" rows="3" @bind="localizationInput.DescriptionEn"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Mô tả (한국어)</label>
+                                    <textarea class="form-control shadow-sm border-0" rows="3" @bind="localizationInput.DescriptionKo"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Mô tả (中文)</label>
+                                    <textarea class="form-control shadow-sm border-0" rows="3" @bind="localizationInput.DescriptionZh"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Mô tả (日本語)</label>
+                                    <textarea class="form-control shadow-sm border-0" rows="3" @bind="localizationInput.DescriptionJa"></textarea>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer bg-white border-0 rounded-bottom-4 shadow-sm">
@@ -180,9 +211,11 @@
     private bool hienThiFormThem = false;
     private bool isEditMode = false;
     private bool isUploadingImage;
+    private bool isTranslatingDescriptions;
 
     // 1. KHAI BÁO BIẾN ĐỂ HỨNG DỮ LIỆU TỪ FORM THÊM MỚI
     private Poi newPoi = new Poi { Status = "Active", Radius = 50 };
+    private PoiLocalizationInput localizationInput = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -265,6 +298,7 @@
     {
         // Reset lại dữ liệu mặc định khi mở form
         newPoi = new Poi { Status = "Active", Radius = 50, CreatedAt = DateTime.Now };
+        localizationInput = new PoiLocalizationInput();
         isEditMode = false;
         hienThiFormThem = true;
     }
@@ -281,6 +315,15 @@
             Thumbnail = poi.Thumbnail,
             Status = poi.Status,
             CreatedAt = poi.CreatedAt
+        };
+
+        localizationInput = new PoiLocalizationInput
+        {
+            DescriptionVi = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "vi")?.Description,
+            DescriptionEn = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "en")?.Description,
+            DescriptionKo = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "ko")?.Description,
+            DescriptionZh = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "zh")?.Description,
+            DescriptionJa = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "ja")?.Description
         };
 
         isEditMode = true;
@@ -319,7 +362,8 @@
                 Radius = newPoi.Radius,
                 Thumbnail = string.IsNullOrWhiteSpace(newPoi.Thumbnail) ? null : newPoi.Thumbnail.Trim(),
                 Status = newPoi.Status,
-                CreatedAt = newPoi.CreatedAt
+                CreatedAt = newPoi.CreatedAt,
+                Poilocalizations = new List<PoiLocalization>()
             };
 
             var response = isEditMode
@@ -328,6 +372,20 @@
 
             if (response.IsSuccessStatusCode)
             {
+                var poiId = isEditMode
+                    ? newPoi.Poiid
+                    : (await response.Content.ReadFromJsonAsync<Poi>())?.Poiid;
+
+                if (poiId.HasValue && poiId.Value > 0)
+                {
+                    var localizationResponse = await Http.PutAsJsonAsync($"api/Pois/{poiId.Value}/localizations", localizationInput);
+                    if (!localizationResponse.IsSuccessStatusCode)
+                    {
+                        var localizationError = await localizationResponse.Content.ReadAsStringAsync();
+                        await ShowErrorAsync("Lỗi!", $"Lưu địa điểm thành công nhưng lưu mô tả thất bại: {localizationError}");
+                    }
+                }
+
                 await ShowSuccessAsync("Thành công!", isEditMode ? $"Đã cập nhật {newPoi.Name}." : $"Đã thêm {newPoi.Name} vào hệ thống.");
                 hienThiFormThem = false;
                 isEditMode = false;
@@ -346,6 +404,50 @@
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task TranslateDescriptionsAsync()
+    {
+        if (isTranslatingDescriptions)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(localizationInput.DescriptionVi))
+        {
+            await ShowErrorAsync("Thiếu dữ liệu", "Vui lòng nhập mô tả tiếng Việt trước khi dịch tự động.");
+            return;
+        }
+
+        try
+        {
+            isTranslatingDescriptions = true;
+            var response = await Http.PostAsJsonAsync("api/Pois/translate-description", new TranslateDescriptionRequest
+            {
+                DescriptionVi = localizationInput.DescriptionVi
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                await ShowErrorAsync("Lỗi dịch", string.IsNullOrWhiteSpace(content) ? "Không thể dịch mô tả tự động." : content);
+                return;
+            }
+
+            var translated = await response.Content.ReadFromJsonAsync<PoiLocalizationInput>();
+            if (translated != null)
+            {
+                localizationInput = translated;
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync("Lỗi dịch", $"Không thể dịch mô tả tự động: {ex.Message}");
+        }
+        finally
+        {
+            isTranslatingDescriptions = false;
         }
     }
 
@@ -418,5 +520,26 @@
         public string? Thumbnail { get; set; }
         public string? Status { get; set; }
         public DateTime? CreatedAt { get; set; }
+        public List<PoiLocalization> Poilocalizations { get; set; } = new();
+    }
+
+    public class PoiLocalization
+    {
+        public string LanguageCode { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+
+    public class PoiLocalizationInput
+    {
+        public string? DescriptionVi { get; set; }
+        public string? DescriptionEn { get; set; }
+        public string? DescriptionKo { get; set; }
+        public string? DescriptionZh { get; set; }
+        public string? DescriptionJa { get; set; }
+    }
+
+    public class TranslateDescriptionRequest
+    {
+        public string DescriptionVi { get; set; } = string.Empty;
     }
 }

@@ -9,8 +9,6 @@ public partial class SettingsPage : ContentPage
     private readonly OfflineSyncService _offlineSyncService;
     private Button? _btnOfflineSync;
     private Label? _lblOfflineSyncStatus;
-    private Frame? _accountCard;
-    private Frame? _ownerAreaCard;
 
     public SettingsPage()
     {
@@ -18,32 +16,12 @@ public partial class SettingsPage : ContentPage
         _offlineSyncService = new OfflineSyncService(new ApiService());
         _btnOfflineSync = this.FindByName<Button>("btnOfflineSync");
         _lblOfflineSyncStatus = this.FindByName<Label>("lblOfflineSyncStatus");
-        _accountCard = this.FindByName<Frame>("accountCard");
-        _ownerAreaCard = this.FindByName<Frame>("ownerAreaCard");
     }
 
     // Hàm này tự chạy khi mở trang Cài đặt lên
     protected override void OnAppearing()
     {
         base.OnAppearing();
-
-        var token = Preferences.Default.Get("AuthToken", string.Empty);
-        var displayName = Preferences.Default.Get("DisplayName", "").Trim();
-        var isLoggedIn = !string.IsNullOrWhiteSpace(token);
-
-        if (_accountCard != null)
-        {
-            _accountCard.IsVisible = isLoggedIn;
-        }
-
-        if (_ownerAreaCard != null)
-        {
-            _ownerAreaCard.IsVisible = !isLoggedIn;
-        }
-
-        lblLoggedInUser.Text = isLoggedIn
-            ? (string.IsNullOrWhiteSpace(displayName) ? "Đã đăng nhập" : displayName)
-            : "Chưa đăng nhập";
 
         string lang = Preferences.Default.Get("AppLanguage", "vi");
         ApplyLanguageSelection(lang);
@@ -165,28 +143,9 @@ public partial class SettingsPage : ContentPage
             : $"Lần đồng bộ gần nhất: {lastSyncText}";
     }
 
-    private async void OnOwnerLoginClicked(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new LoginPage());
-    }
-
     private async void OnOwnerRegisterClicked(object sender, EventArgs e)
     {
         await Navigation.PushAsync(new OwnerRegisterPage());
     }
 
-    private async void OnLogoutClicked(object sender, EventArgs e)
-    {
-        var confirm = await DisplayAlert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", "Đăng xuất", "Hủy");
-        if (!confirm)
-        {
-            return;
-        }
-
-        Preferences.Default.Remove("AuthToken");
-        Preferences.Default.Remove("UserRole");
-        Preferences.Default.Remove("DisplayName");
-
-        Application.Current!.MainPage = new AppShell();
-    }
 }

@@ -39,6 +39,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpClient();
 var app = builder.Build();
 
 // 4. Cấu hình HTTP request pipeline

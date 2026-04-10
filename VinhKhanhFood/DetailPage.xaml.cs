@@ -12,6 +12,7 @@ public partial class DetailPage : ContentPage
     private readonly ApiService _apiService = new ApiService();
     private readonly OfflineSyncService _offlineSyncService;
     private bool _isLoadingDetail;
+    private bool _hasTrackedVisit;
 
     // Sửa constructor để nhận đối tượng Poi
     public DetailPage(Poi poi, bool autoSpeakOnAppear = false)
@@ -41,6 +42,7 @@ public partial class DetailPage : ContentPage
 
         if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet && _poi.Menus != null && _poi.Menus.Any())
         {
+            await TryTrackVisitAsync();
             return;
         }
 
@@ -88,6 +90,7 @@ public partial class DetailPage : ContentPage
 
             _poi = detailPoi;
             BindingContext = _poi;
+            await TryTrackVisitAsync();
         }
         catch (Exception ex)
         {
@@ -248,6 +251,28 @@ public partial class DetailPage : ContentPage
         }
 
         Preferences.Default.Set("FavoritePoiIds", serialized);
+    }
+
+    private async Task TryTrackVisitAsync()
+    {
+        if (_hasTrackedVisit || _poi == null || _poi.Poiid <= 0)
+        {
+            return;
+        }
+
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            return;
+        }
+
+        try
+        {
+            await _apiService.TrackPoiVisitAsync(_poi.Poiid);
+            _hasTrackedVisit = true;
+        }
+        catch
+        {
+        }
     }
 
     private void Dummy()
