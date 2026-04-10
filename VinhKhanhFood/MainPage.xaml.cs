@@ -85,17 +85,21 @@ public partial class MainPage : ContentPage
             myMap.IsShowingUser = true;
 
             List<Poi> data = new();
+            bool apiFailed = false;
+            bool usingOfflineData = false;
             try
             {
                 data = await _apiService.GetPoisAsync();
             }
             catch
             {
+                apiFailed = true;
             }
 
             if (data == null || !data.Any())
             {
                 data = await _offlineSyncService.LoadPoisAsync();
+                usingOfflineData = data.Any();
             }
 
             if (data != null && data.Any())
@@ -145,7 +149,14 @@ public partial class MainPage : ContentPage
             }
             else
             {
-                await DisplayAlert("Thông báo", "API trả về rỗng, chưa có địa điểm để hiển thị.", "OK");
+                if (apiFailed)
+                {
+                    await DisplayAlert("Thông báo", "Không kết nối được máy chủ và chưa có dữ liệu offline.", "OK");
+                }
+                else
+                {
+                    await DisplayAlert("Thông báo", "API trả về rỗng, chưa có địa điểm để hiển thị.", "OK");
+                }
             }
         }
         catch (Exception ex)
