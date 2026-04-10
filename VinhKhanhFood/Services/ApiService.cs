@@ -13,7 +13,7 @@ namespace VinhKhanhFood.Services
     {
         // QUAN TRỌNG: Thay IP của máy tính bạn vào đây (Ví dụ: 192.168.1.5)
         // Số 7044 là Port của Web API (xem lại trên trình duyệt khi chạy API)
-        private const string BaseApiUrl = "http://10.52.121.26:5100/api/";
+        private const string BaseApiUrl = "http://192.168.1.46:5100/api/";
         private static readonly string BaseFileUrl = BaseApiUrl.EndsWith("api/", StringComparison.OrdinalIgnoreCase)
             ? BaseApiUrl[..^4]
             : BaseApiUrl;
@@ -47,6 +47,11 @@ namespace VinhKhanhFood.Services
         public async Task<Poi?> GetPoiByIdAsync(int poiId)
         {
             var response = await _httpClient.GetAsync(BaseApiUrl + $"Pois/public/{poiId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                response = await _httpClient.GetAsync(BaseApiUrl + $"Pois/{poiId}");
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();

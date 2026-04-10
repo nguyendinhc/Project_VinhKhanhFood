@@ -3,41 +3,79 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
              x:Class="VinhKhanhFood.ScanQRPage"
-             Title="Quét Mã QR"
-             BackgroundColor="Black">
-    <Grid>
-        <Grid x:Name="cameraHost" />
-
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="260" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="260" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <BoxView Grid.Row="0" Grid.ColumnSpan="3" Color="#80000000" />
-            <BoxView Grid.Row="1" Grid.Column="0" Color="#80000000" />
-            <BoxView Grid.Row="1" Grid.Column="2" Color="#80000000" />
-            <BoxView Grid.Row="2" Grid.ColumnSpan="3" Color="#80000000" />
-
-            <Border Grid.Row="1" Grid.Column="1"
-                    Stroke="White"
-                    StrokeThickness="2"
-                    StrokeShape="RoundRectangle 24"
-                    BackgroundColor="Transparent" />
+             Title="Quét mã QR"
+             BackgroundColor="#0F172A">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Grid Padding="20,16,20,8">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#1D4ED8" Offset="0" />
+                    <GradientStop Color="#2563EB" Offset="1" />
+                </LinearGradientBrush>
+            </Grid.Background>
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Quét mã QR quán ăn"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       TextColor="White" />
+                <Label x:Name="lblScanStatus"
+                       Text="Đưa mã QR vào khung để quét"
+                       FontSize="13"
+                       TextColor="#DBEAFE" />
+            </VerticalStackLayout>
         </Grid>
 
-        <Label Text="📷 Đưa mã QR vào khung hình"
-               TextColor="White"
-               FontSize="16"
-               FontAttributes="Bold"
-               HorizontalOptions="Center"
-               VerticalOptions="End"
-               Margin="0,0,0,36" />
+        <Grid Grid.Row="1" Margin="18,12">
+            <Border Stroke="#93C5FD" StrokeThickness="2" StrokeShape="RoundRectangle 24" BackgroundColor="Transparent">
+                <Grid>
+                    <Grid x:Name="cameraHost" />
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="250" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="250" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Row="1"
+                                Grid.Column="1"
+                                Stroke="#E0F2FE"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 20"
+                                BackgroundColor="Transparent" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Frame Grid.Row="2"
+               Margin="16,0,16,14"
+               CornerRadius="18"
+               HasShadow="True"
+               Padding="14"
+               BackgroundColor="White">
+            <HorizontalStackLayout Spacing="10">
+                <Button x:Name="btnTorch"
+                        Text="Bật đèn"
+                        BackgroundColor="#0EA5E9"
+                        TextColor="White"
+                        CornerRadius="12"
+                        HeightRequest="44"
+                        HorizontalOptions="FillAndExpand"
+                        Clicked="OnToggleTorchClicked" />
+                <Button Text="Nhập mã"
+                        BackgroundColor="#F59E0B"
+                        TextColor="White"
+                        CornerRadius="12"
+                        HeightRequest="44"
+                        HorizontalOptions="FillAndExpand"
+                        Clicked="OnManualInputClicked" />
+            </HorizontalStackLayout>
+        </Frame>
     </Grid>
 </ContentPage>
