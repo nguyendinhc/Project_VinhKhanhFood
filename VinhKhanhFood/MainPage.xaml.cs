@@ -58,7 +58,20 @@ public partial class MainPage : ContentPage
         _isNavigating = true;
         try
         {
-            var detailPoi = await _apiService.GetPoiByIdAsync(poi.Poiid);
+            Poi? detailPoi = null;
+
+            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+            {
+                try
+                {
+                    detailPoi = await _apiService.GetPoiByIdAsync(poi.Poiid);
+                }
+                catch
+                {
+                    detailPoi = null;
+                }
+            }
+
             if (detailPoi != null)
             {
                 detailPoi.Introduction = detailPoi.Poilocalizations?.FirstOrDefault()?.Description
@@ -86,21 +99,19 @@ public partial class MainPage : ContentPage
 
             List<Poi> data = new();
             bool apiFailed = false;
-            bool usingOfflineData = false;
-            try
+            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
             {
-                data = await _apiService.GetPoisAsync();
-            }
-            catch
-            {
-                apiFailed = true;
+                try
+                {
+                    await _offlineSyncService.SyncPoisAsync();
+                }
+                catch
+                {
+                    apiFailed = true;
+                }
             }
 
-            if (data == null || !data.Any())
-            {
-                data = await _offlineSyncService.LoadPoisAsync();
-                usingOfflineData = data.Any();
-            }
+            data = await _offlineSyncService.LoadPoisAsync();
 
             if (data != null && data.Any())
             {
@@ -250,7 +261,22 @@ public partial class MainPage : ContentPage
         UpdateUserLocationOnMap(userLocation);
 
         var destination = new Location(targetPoi.Latitude, targetPoi.Longitude);
-        var routePoints = await GetRoadRoutePointsAsync(userLocation, destination);
+        List<Location> routePoints;
+
+        if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+        {
+            routePoints = await GetRoadRoutePointsAsync(userLocation, destination);
+            if (routePoints.Count < 2)
+            {
+                routePoints = new List<Location> { userLocation, destination };
+            }
+        }
+        else
+        {
+            routePoints = new List<Location> { userLocation, destination };
+            await DisplayAlert("Thông báo", "Đang offline, hiển thị đường thẳng đến quán gần nhất.", "OK");
+        }
+
         if (routePoints.Count < 2)
         {
             await DisplayAlert("Thông báo", "Không lấy được lộ trình theo đường đi. Vui lòng thử lại.", "OK");

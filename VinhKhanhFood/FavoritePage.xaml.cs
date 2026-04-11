@@ -45,18 +45,18 @@ public partial class FavoritePage : ContentPage
         {
             List<Poi> allPois = new();
 
-            try
+            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
             {
-                allPois = await _apiService.GetPoisAsync();
-            }
-            catch
-            {
+                try
+                {
+                    await _offlineSyncService.SyncPoisAsync();
+                }
+                catch
+                {
+                }
             }
 
-            if (allPois == null || !allPois.Any())
-            {
-                allPois = await _offlineSyncService.LoadPoisAsync();
-            }
+            allPois = await _offlineSyncService.LoadPoisAsync();
 
             if (allPois != null && allPois.Any())
             {

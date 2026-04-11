@@ -13,7 +13,6 @@ public class OfflineSyncService
     private const string OfflineDatabaseFileName = "offline_cache.db3";
     private const string PoisCacheKey = "pois";
     private const string LastSyncPreferenceKey = "OfflinePoisLastSyncUtc";
-    private const string PendingActionsPreferenceKey = "PendingOfflineActions";
     private static bool _offlineNoticeShown;
     private static readonly SemaphoreSlim _pendingActionsLock = new(1, 1);
     private readonly ApiService _apiService;
@@ -132,6 +131,8 @@ public class OfflineSyncService
 
     public async Task<int> ProcessPendingActionsAsync()
     {
+        await _initializationTask;
+
         if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
         {
             return 0;
@@ -146,7 +147,7 @@ public class OfflineSyncService
         await _pendingActionsLock.WaitAsync();
         try
         {
-            var actions = LoadPendingActions();
+            var actions = await LoadPendingActionsAsync();
             if (actions.Count == 0)
             {
                 await SyncAccountPreferencesAsync(syncFavorites: true, syncLanguage: true);
@@ -189,7 +190,7 @@ public class OfflineSyncService
                 }
             }
 
-            SavePendingActions(remaining);
+            await SavePendingActionsAsync(remaining);
             var shouldSyncFavorites = !remaining.Any(entry => string.Equals(entry.Type, "favorite", StringComparison.OrdinalIgnoreCase));
             var shouldSyncLanguage = !remaining.Any(entry => string.Equals(entry.Type, "language", StringComparison.OrdinalIgnoreCase));
             await SyncAccountPreferencesAsync(shouldSyncFavorites, shouldSyncLanguage);
@@ -209,25 +210,23 @@ public class OfflineSyncService
     private async Task InitializeDatabaseAsync()
     {
         await _database.CreateTableAsync<OfflineCacheEntry>();
+        await _database.CreateTableAsync<PendingActionEntry>();
     }
 
     private async Task EnqueueActionAsync(string type, string key, object payload)
     {
+        await _initializationTask;
+
         await _pendingActionsLock.WaitAsync();
         try
         {
-            var actions = LoadPendingActions();
-            actions.RemoveAll(action => string.Equals(action.Key, key, StringComparison.OrdinalIgnoreCase));
-
-            actions.Add(new PendingActionEntry
+            await _database.InsertOrReplaceAsync(new PendingActionEntry
             {
                 Type = type,
                 Key = key,
                 Payload = JsonConvert.SerializeObject(payload),
                 CreatedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture)
             });
-
-            SavePendingActions(actions);
         }
         finally
         {
@@ -297,27 +296,20 @@ public class OfflineSyncService
         }
     }
 
-    private static List<PendingActionEntry> LoadPendingActions()
+    private async Task<List<PendingActionEntry>> LoadPendingActionsAsync()
     {
-        var json = Preferences.Default.Get(PendingActionsPreferenceKey, string.Empty);
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return new List<PendingActionEntry>();
-        }
-
-        return JsonConvert.DeserializeObject<List<PendingActionEntry>>(json) ?? new List<PendingActionEntry>();
+        return await _database.Table<PendingActionEntry>()
+            .OrderBy(x => x.CreatedUtc)
+            .ToListAsync();
     }
 
-    private static void SavePendingActions(List<PendingActionEntry> actions)
+    private async Task SavePendingActionsAsync(List<PendingActionEntry> actions)
     {
-        if (actions.Count == 0)
+        await _database.DeleteAllAsync<PendingActionEntry>();
+        if (actions.Count > 0)
         {
-            Preferences.Default.Remove(PendingActionsPreferenceKey);
-            return;
+            await _database.InsertAllAsync(actions);
         }
-
-        var json = JsonConvert.SerializeObject(actions);
-        Preferences.Default.Set(PendingActionsPreferenceKey, json);
     }
 
     private static string GetDatabasePath()
@@ -335,8 +327,9 @@ public class OfflineSyncService
 
     private class PendingActionEntry
     {
-        public string Type { get; set; } = string.Empty;
+        [PrimaryKey]
         public string Key { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
         public string Payload { get; set; } = string.Empty;
         public string CreatedUtc { get; set; } = string.Empty;
     }
