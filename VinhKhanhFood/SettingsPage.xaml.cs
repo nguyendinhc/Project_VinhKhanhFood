@@ -28,12 +28,6 @@ public partial class SettingsPage : ContentPage
 
         swAutoPlay.IsToggled = Preferences.Default.Get("AutoPlayGPS", true);
         UpdateOfflineSyncStatus();
-
-        Dispatcher.Dispatch(async () =>
-        {
-            await _offlineSyncService.ProcessPendingActionsAsync();
-            ApplyLanguageSelection(Preferences.Default.Get("AppLanguage", "vi"));
-        });
     }
 
     private void OnLanguageChanged(object sender, EventArgs e)

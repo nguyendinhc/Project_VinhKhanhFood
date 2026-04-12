@@ -191,8 +191,14 @@ public partial class DetailPage : ContentPage
         }
     }
 
-    private void OnFavoriteClicked(object sender, EventArgs e)
+    private async void OnFavoriteClicked(object sender, EventArgs e)
     {
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            await DisplayAlert("Thông báo", "Đang dùng dữ liệu offline, không thể thay đổi Yêu thích.", "OK");
+            return;
+        }
+
         var favoritePoiIds = GetFavoritePoiIds();
         var legacyFavorites = Preferences.Default.Get("FavoritePois", "");
         var legacyList = legacyFavorites.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -214,13 +220,6 @@ public partial class DetailPage : ContentPage
 
         SaveFavoritePoiIds(favoritePoiIds);
         Preferences.Default.Set("FavoritePois", string.Join(",", legacyList));
-
-        var token = Preferences.Default.Get("AuthToken", string.Empty);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            _ = _offlineSyncService.EnqueueFavoriteActionAsync(_poi.Poiid, !isFavorite);
-            _ = _offlineSyncService.ProcessPendingActionsAsync();
-        }
 
         CheckFavoriteStatus();
     }
