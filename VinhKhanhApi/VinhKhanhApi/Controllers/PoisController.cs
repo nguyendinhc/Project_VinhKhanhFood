@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Encodings.Web;
@@ -108,6 +107,7 @@ namespace VinhKhanhApi.Controllers
 
             var pois = await _context.Pois
                 .AsNoTracking()
+                .Include(p => p.Poilocalizations)
                 .Where(p => poiIds.Contains(p.Poiid))
                 .OrderBy(p => p.Name)
                 .Select(p => new OwnerPoiDto
@@ -118,7 +118,16 @@ namespace VinhKhanhApi.Controllers
                     Longitude = p.Longitude,
                     Radius = p.Radius,
                     Thumbnail = p.Thumbnail,
-                    Status = p.Status
+                    Status = p.Status,
+                    Poilocalizations = p.Poilocalizations
+                        .OrderBy(x => x.LanguageCode)
+                        .Select(x => new PoiLocalizationDto
+                        {
+                            LanguageCode = x.LanguageCode,
+                            Description = x.Description,
+                            AudioUrl = x.AudioUrl
+                        })
+                        .ToList()
                 })
                 .ToListAsync();
 
@@ -314,6 +323,139 @@ namespace VinhKhanhApi.Controllers
 
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpPut("owner/{id:int}/localizations")]
+        [Authorize(Roles = "Owner")]
+        public async Task<IActionResult> UpsertOwnerPoiLocalizations(int id, [FromBody] PoiLocalizationUpsertDto request)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                return Forbid();
+            }
+
+            var ownerPoiIds = await _context.PoiSubmissions
+                .AsNoTracking()
+                .Where(s => s.UserId == userId && s.Poiid != null)
+                .Select(s => s.Poiid!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            if (!ownerPoiIds.Contains(id))
+            {
+                return Forbid();
+            }
+
+            var poi = await _context.Pois
+                .Include(p => p.Poilocalizations)
+                .FirstOrDefaultAsync(p => p.Poiid == id);
+
+            if (poi == null)
+            {
+                return NotFound("Không tìm thấy quán.");
+            }
+
+            if (string.Equals(poi.Status, "Inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Quán đang tạm ẩn, không thể chỉnh sửa mô tả.");
+            }
+
+            // Owner chỉ nhập tiếng Việt -> tự dịch (best-effort).
+            // Nếu dịch thất bại, KHÔNG được ghi đè bằng tiếng Việt; giữ nguyên mô tả cũ của ngôn ngữ đó.
+            string? viText = null;
+            string? enText = null;
+            string? koText = null;
+            string? zhText = null;
+            string? jaText = null;
+
+            if (!string.IsNullOrWhiteSpace(request.DescriptionVi))
+            {
+                viText = request.DescriptionVi.Trim();
+                enText = await TranslateFromVietnameseAsync(viText, "en");
+                koText = await TranslateFromVietnameseAsync(viText, "ko");
+                zhText = await TranslateFromVietnameseAsync(viText, "zh-CN");
+                jaText = await TranslateFromVietnameseAsync(viText, "ja");
+            }
+
+            var map = new Dictionary<string, string?>
+            {
+                ["vi"] = viText,
+                ["en"] = enText,
+                ["ko"] = koText,
+                ["zh"] = zhText,
+                ["ja"] = jaText
+            };
+
+            foreach (var (languageCode, newDescription) in map)
+            {
+                var existing = poi.Poilocalizations.FirstOrDefault(x => x.LanguageCode == languageCode);
+
+                // Chỉ upsert ngôn ngữ khi có dữ liệu mới (hoặc là viText).
+                // Với en/ko/zh/ja: nếu dịch thất bại -> newDescription null -> giữ nguyên.
+                if (string.Equals(languageCode, "vi", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (existing == null)
+                    {
+                        _context.Poilocalizations.Add(new Poilocalization
+                        {
+                            Poiid = poi.Poiid,
+                            LanguageCode = languageCode,
+                            Description = newDescription
+                        });
+                    }
+                    else
+                    {
+                        existing.Description = newDescription;
+                    }
+
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(newDescription))
+                {
+                    continue;
+                }
+
+                if (existing == null)
+                {
+                    _context.Poilocalizations.Add(new Poilocalization
+                    {
+                        Poiid = poi.Poiid,
+                        LanguageCode = languageCode,
+                        Description = newDescription
+                    });
+                }
+                else
+                {
+                    existing.Description = newDescription;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPost("owner/translate-description")]
+        [Authorize(Roles = "Owner")]
+        public async Task<ActionResult<PoiLocalizationUpsertDto>> TranslateOwnerDescription([FromBody] TranslateDescriptionRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.DescriptionVi))
+            {
+                return BadRequest("Vui lòng nhập mô tả tiếng Việt trước khi dịch.");
+            }
+
+            var vi = request.DescriptionVi.Trim();
+            var result = new PoiLocalizationUpsertDto
+            {
+                DescriptionVi = vi,
+                DescriptionEn = await TranslateFromVietnameseAsync(vi, "en"),
+                DescriptionKo = await TranslateFromVietnameseAsync(vi, "ko"),
+                DescriptionZh = await TranslateFromVietnameseAsync(vi, "zh-CN"),
+                DescriptionJa = await TranslateFromVietnameseAsync(vi, "ja")
+            };
+
+            return Ok(result);
         }
 
         [HttpPut("{id:int}/localizations")]
@@ -559,6 +701,7 @@ namespace VinhKhanhApi.Controllers
             public int? Radius { get; set; }
             public string? Thumbnail { get; set; }
             public string? Status { get; set; }
+            public List<PoiLocalizationDto> Poilocalizations { get; set; } = new();
         }
 
         public class AvailablePoiDto
@@ -600,12 +743,19 @@ namespace VinhKhanhApi.Controllers
             public string? DescriptionJa { get; set; }
         }
 
+        public class PoiLocalizationDto
+        {
+            public string LanguageCode { get; set; } = string.Empty;
+            public string? Description { get; set; }
+            public string? AudioUrl { get; set; }
+        }
+
         public class TranslateDescriptionRequest
         {
             public string DescriptionVi { get; set; } = string.Empty;
         }
 
-        private async Task<string> TranslateFromVietnameseAsync(string source, string targetLanguageCode)
+        private async Task<string?> TranslateFromVietnameseAsync(string source, string targetLanguageCode)
         {
             try
             {
@@ -614,7 +764,7 @@ namespace VinhKhanhApi.Controllers
                 var response = await client.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
                 {
-                    return source;
+                    return null;
                 }
 
                 var raw = await response.Content.ReadAsStringAsync();
@@ -622,13 +772,13 @@ namespace VinhKhanhApi.Controllers
                 var root = doc.RootElement;
                 if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
                 {
-                    return source;
+                    return null;
                 }
 
                 var textParts = root[0];
                 if (textParts.ValueKind != JsonValueKind.Array)
                 {
-                    return source;
+                    return null;
                 }
 
                 var translated = new List<string>();
@@ -642,11 +792,11 @@ namespace VinhKhanhApi.Controllers
                     }
                 }
 
-                return translated.Count == 0 ? source : string.Concat(translated);
+                return translated.Count == 0 ? null : string.Concat(translated);
             }
             catch
             {
-                return source;
+                return null;
             }
         }
     }

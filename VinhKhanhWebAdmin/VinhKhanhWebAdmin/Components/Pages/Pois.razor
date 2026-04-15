@@ -378,6 +378,29 @@
 
                 if (poiId.HasValue && poiId.Value > 0)
                 {
+                    // Nếu Admin chỉ nhập/sửa tiếng Việt, tự dịch & ghi đè các ngôn ngữ còn lại để tránh giữ text cũ.
+                    if (!string.IsNullOrWhiteSpace(localizationInput.DescriptionVi))
+                    {
+                        var translateResponse = await Http.PostAsJsonAsync("api/Pois/translate-description", new TranslateDescriptionRequest
+                        {
+                            DescriptionVi = localizationInput.DescriptionVi
+                        });
+
+                        if (translateResponse.IsSuccessStatusCode)
+                        {
+                            var translated = await translateResponse.Content.ReadFromJsonAsync<PoiLocalizationInput>();
+                            if (translated != null)
+                            {
+                                // Chỉ ghi đè các ngôn ngữ dịch thành công (không null/empty)
+                                localizationInput.DescriptionVi = translated.DescriptionVi ?? localizationInput.DescriptionVi;
+                                localizationInput.DescriptionEn = string.IsNullOrWhiteSpace(translated.DescriptionEn) ? localizationInput.DescriptionEn : translated.DescriptionEn;
+                                localizationInput.DescriptionKo = string.IsNullOrWhiteSpace(translated.DescriptionKo) ? localizationInput.DescriptionKo : translated.DescriptionKo;
+                                localizationInput.DescriptionZh = string.IsNullOrWhiteSpace(translated.DescriptionZh) ? localizationInput.DescriptionZh : translated.DescriptionZh;
+                                localizationInput.DescriptionJa = string.IsNullOrWhiteSpace(translated.DescriptionJa) ? localizationInput.DescriptionJa : translated.DescriptionJa;
+                            }
+                        }
+                    }
+
                     var localizationResponse = await Http.PutAsJsonAsync($"api/Pois/{poiId.Value}/localizations", localizationInput);
                     if (!localizationResponse.IsSuccessStatusCode)
                     {

@@ -77,6 +77,10 @@
                                 <div class="small text-muted mt-1">Đang tải ảnh...</div>
                             }
                         </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Mô tả (Tiếng Việt)</label>
+                            <textarea class="form-control" rows="3" @bind="createLocalization.DescriptionVi" placeholder="Nhập mô tả tiếng Việt..."></textarea>
+                        </div>
                     }
                 </div>
                 <div class="d-flex justify-content-end mt-3">
@@ -125,6 +129,10 @@
                             {
                                 <div class="small text-muted mt-1">Đang tải ảnh...</div>
                             }
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Mô tả (Tiếng Việt)</label>
+                            <textarea class="form-control" rows="3" @bind="updateLocalization.DescriptionVi" placeholder="Nhập mô tả tiếng Việt..." disabled="@IsUpdateLocked"></textarea>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
@@ -199,6 +207,8 @@
     private readonly List<AvailablePoi> availablePois = new();
     private OwnerPoiCreateModel createModel = new() { Radius = 50 };
     private OwnerPoiUpdateModel updateModel = new();
+    private PoiLocalizationInput createLocalization = new();
+    private PoiLocalizationInput updateLocalization = new();
     private OwnerPoi? selectedPoi;
     private int? selectedAvailablePoiId;
     private bool isClaimExistingMode = true;
@@ -344,6 +354,14 @@
                     Radius = selectedPoi.Radius,
                     Thumbnail = selectedPoi.Thumbnail
                 };
+                updateLocalization = new PoiLocalizationInput
+                {
+                    DescriptionVi = selectedPoi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "vi")?.Description,
+                    DescriptionEn = selectedPoi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "en")?.Description,
+                    DescriptionKo = selectedPoi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "ko")?.Description,
+                    DescriptionZh = selectedPoi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "zh")?.Description,
+                    DescriptionJa = selectedPoi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "ja")?.Description
+                };
             }
         }
         catch (Exception ex)
@@ -398,7 +416,14 @@
                 return;
             }
 
+            var created = await response.Content.ReadFromJsonAsync<OwnerPoi>();
+            if (!shouldClaimExisting && created != null && created.Poiid > 0)
+            {
+                await Http.PutAsJsonAsync($"api/pois/owner/{created.Poiid}/localizations", createLocalization);
+            }
+
             createModel = new OwnerPoiCreateModel { Radius = 50 };
+            createLocalization = new PoiLocalizationInput();
             await LoadPois();
         }
         catch (Exception ex)
@@ -423,6 +448,14 @@
             Longitude = poi.Longitude,
             Radius = poi.Radius,
             Thumbnail = poi.Thumbnail
+        };
+        updateLocalization = new PoiLocalizationInput
+        {
+            DescriptionVi = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "vi")?.Description,
+            DescriptionEn = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "en")?.Description,
+            DescriptionKo = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "ko")?.Description,
+            DescriptionZh = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "zh")?.Description,
+            DescriptionJa = poi.Poilocalizations?.FirstOrDefault(x => x.LanguageCode == "ja")?.Description
         };
     }
 
@@ -459,6 +492,14 @@
                 return;
             }
 
+            var localizationResponse = await Http.PutAsJsonAsync($"api/pois/owner/{updateModel.Poiid}/localizations", updateLocalization);
+            if (!localizationResponse.IsSuccessStatusCode)
+            {
+                var message = await localizationResponse.Content.ReadAsStringAsync();
+                updateError = string.IsNullOrWhiteSpace(message) ? "Cập nhật quán thành công nhưng lưu mô tả thất bại." : message;
+                return;
+            }
+
             await LoadPois();
         }
         catch (Exception ex)
@@ -480,6 +521,7 @@
         public int? Radius { get; set; }
         public string? Thumbnail { get; set; }
         public string? Status { get; set; }
+        public List<PoiLocalization> Poilocalizations { get; set; } = new();
     }
 
     public class OwnerPoiCreateModel
@@ -511,6 +553,22 @@
         public double Longitude { get; set; }
         public int? Radius { get; set; }
         public string? Thumbnail { get; set; }
+    }
+
+    public class PoiLocalization
+    {
+        public string LanguageCode { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? AudioUrl { get; set; }
+    }
+
+    public class PoiLocalizationInput
+    {
+        public string? DescriptionVi { get; set; }
+        public string? DescriptionEn { get; set; }
+        public string? DescriptionKo { get; set; }
+        public string? DescriptionZh { get; set; }
+        public string? DescriptionJa { get; set; }
     }
 
     private static bool IsPoiActive(string? status)
