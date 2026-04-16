@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Storage;
+using Microsoft.Maui.Storage;
 using Microsoft.Maui.Storage;
 using Newtonsoft.Json;
 using System.IO;
@@ -14,7 +14,7 @@ namespace VinhKhanhFood.Services
         // QUAN TRỌNG: Thay IP của máy tính bạn vào đây (Ví dụ: 192.168.1.5)
         // Số 7044 là Port của Web API (xem lại trên trình duyệt khi chạy API)
 
-        private const string BaseApiUrl = "http://10.10.20.251:5100/api/";
+        private const string BaseApiUrl = "http://10.19.70.26:5100/api/";
 
         private static readonly string BaseFileUrl = BaseApiUrl.EndsWith("api/", StringComparison.OrdinalIgnoreCase)
             ? BaseApiUrl[..^4]
@@ -106,7 +106,7 @@ namespace VinhKhanhFood.Services
 
         public async Task EnsureFirstOpenLoggedAsync()
         {
-            const string key = "HasLoggedAppFirstOpen";
+            const string key = "HasLoggedAppFirstOpen_V2";
             if (Preferences.Default.Get(key, false))
             {
                 return;
@@ -115,15 +115,18 @@ namespace VinhKhanhFood.Services
             try
             {
                 await LogAppEventAsync("app_first_open");
-            }
-            catch
-            {
-                // best-effort: không chặn trải nghiệm app
-            }
-            finally
-            {
-                // Ghi lại để chỉ tính 1 lần / 1 thiết bị
+                // Ghi lại để chỉ tính 1 lần / 1 thiết bị khi thành công
                 Preferences.Default.Set(key, true);
+            }
+            catch (Exception ex)
+            {
+                // Hiển thị tạm thông báo lỗi để debug xem vì sao app_first_open lưu không được
+                Microsoft.Maui.ApplicationModel.MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    Application.Current?.MainPage?.DisplayAlert("Lỗi log", ex.Message, "OK");
+                });
+                // best-effort: không chặn trải nghiệm app
+                // Nếu lỗi mạng, sẽ thử lại vào lần mở app tiếp theo
             }
         }
 
@@ -145,6 +148,10 @@ namespace VinhKhanhFood.Services
             var json = JsonConvert.SerializeObject(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync(BaseApiUrl + "events", content);
+            
+            // Xử lý ném lỗi nếu API gọi bị lỗi (ví dụ 400 Bad Request) 
+            // để hàm gọi nó có thể bắt catch và không lưu trạng thái đã ghi thành công
+            response.EnsureSuccessStatusCode();
 
             // Không throw để tránh làm hỏng luồng chính
             response.Dispose();

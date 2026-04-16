@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Maps; // Dùng cho Pin và Map
+using Microsoft.Maui.Controls.Maps; // Dùng cho Pin và Map
 using Microsoft.Maui.Maps;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
@@ -22,6 +22,7 @@ public partial class MainPage : ContentPage
     // Lưu danh sách các quán đã được thuyết minh để không bị nói lặp lại liên tục khi đang đứng yên một chỗ
     private HashSet<int> _spokenPoiIds = new HashSet<int>();
     private IDispatcherTimer? _gpsTimer;
+    private bool _isDataLoaded;
     private bool _isCheckingProximity;
     private bool _isSpeaking;
     private Microsoft.Maui.Controls.Maps.Circle? _userLocationCircle;
@@ -36,7 +37,6 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
         _offlineSyncService = new OfflineSyncService(_apiService);
-        LoadData();
     }
 
     private async void OnPoiSelected(object sender, SelectionChangedEventArgs e)
@@ -89,7 +89,7 @@ public partial class MainPage : ContentPage
         }
     }
 
-    async void LoadData()
+    async Task LoadDataAsync()
     {
         try
         {
@@ -177,12 +177,19 @@ public partial class MainPage : ContentPage
         }
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
         ApplyPoiListVisibility();
         _ = _apiService.EnsureFirstOpenLoggedAsync();
         _ = _offlineSyncService.ProcessPendingActionsAsync();
+
+        if (!_isDataLoaded)
+        {
+            _isDataLoaded = true;
+            await LoadDataAsync();
+        }
+
         if (lstPois.ItemsSource is IEnumerable<Poi> pois && pois.Any())
         {
             StartGpsTimer();

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using VinhKhanhFood.Models;
 using VinhKhanhFood.Services;
@@ -305,6 +305,15 @@ public partial class ScanQRPage : ContentPage
         var input = await DisplayPromptAsync("Nhập mã QR", "Nhập nội dung mã hoặc ID quán", "Tìm", "Hủy", keyboard: Keyboard.Text);
         if (string.IsNullOrWhiteSpace(input))
         {
+            return;
+        }
+
+        if (IsGlobalQr(input))
+        {
+            lblScanStatus.Text = "Đã nhập QR tổng. Đang mở danh sách quán...";
+            Preferences.Default.Set("HasUnlockedPoiList", true);
+            _ = _apiService.LogAppEventAsync("qr_scan", "global");
+            await Shell.Current.GoToAsync("//main");
             return;
         }
 
