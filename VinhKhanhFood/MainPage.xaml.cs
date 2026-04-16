@@ -13,6 +13,7 @@ namespace VinhKhanhFood;
 
 public partial class MainPage : ContentPage
 {
+    private const string GlobalQrUnlockedKey = "HasUnlockedPoiList";
     private static readonly HttpClient _httpClient = new();
     private List<Poi> _allPois = new();
     ApiService _apiService = new ApiService();
@@ -179,6 +180,8 @@ public partial class MainPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        ApplyPoiListVisibility();
+        _ = _apiService.EnsureFirstOpenLoggedAsync();
         _ = _offlineSyncService.ProcessPendingActionsAsync();
         if (lstPois.ItemsSource is IEnumerable<Poi> pois && pois.Any())
         {
@@ -638,5 +641,17 @@ public partial class MainPage : ContentPage
         }
 
         return null;
+    }
+
+    private void ApplyPoiListVisibility()
+    {
+        var isUnlocked = Preferences.Default.Get(GlobalQrUnlockedKey, false);
+        poiListPanel.IsVisible = isUnlocked;
+        globalQrOverlay.IsVisible = !isUnlocked;
+    }
+
+    private async void OnScanGlobalQrClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("//scanqr");
     }
 }

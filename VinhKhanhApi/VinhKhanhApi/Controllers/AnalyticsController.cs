@@ -27,6 +27,7 @@ namespace VinhKhanhApi.Controllers
             var totalMenus = await _context.Menus.CountAsync();
             var totalVisits = await _context.VisitLogs.CountAsync();
             var pendingSubmissions = await _context.PoiSubmissions.CountAsync(s => s.Status == null || s.Status == 0);
+            var pendingOwners = await _context.AdminUsers.CountAsync(u => u.RoleId == null);
 
             var today = DateTime.Today;
             var fromDate = today.AddDays(-6);
@@ -106,6 +107,7 @@ namespace VinhKhanhApi.Controllers
                 TotalMenus = totalMenus,
                 TotalVisits = totalVisits,
                 PendingSubmissions = pendingSubmissions,
+                PendingOwners = pendingOwners,
                 LocalizedPois = localizedPois,
                 PoisWithoutMenus = poisWithoutMenus,
                 PoisWithoutThumbnail = poisWithoutThumbnail,
@@ -115,6 +117,93 @@ namespace VinhKhanhApi.Controllers
             };
 
             return Ok(dashboard);
+        }
+
+        // Thống kê usage cho app (không cần đăng nhập)
+        [HttpGet("usage")]
+        public async Task<ActionResult<AppUsageDto>> GetAppUsageAsync()
+        {
+            var today = DateTime.Today;
+            var fromDate = today.AddDays(-6);
+
+            var totalInstalls = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.EventType == "app_first_open")
+                .Select(e => e.DeviceId)
+                .Distinct()
+                .CountAsync();
+
+            var todayActiveDevices = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.CreatedAt >= today)
+                .Select(e => e.DeviceId)
+                .Distinct()
+                .CountAsync();
+
+            var totalGlobalQrUsers = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.EventType == "qr_scan" && e.QrCode == "global")
+                .Select(e => e.DeviceId)
+                .Distinct()
+                .CountAsync();
+
+            var todayGlobalQrUsers = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.EventType == "qr_scan" && e.QrCode == "global" && e.CreatedAt >= today)
+                .Select(e => e.DeviceId)
+                .Distinct()
+                .CountAsync();
+
+            var totalGlobalQrScans = await _context.AppEventLogs
+                .AsNoTracking()
+                .CountAsync(e => e.EventType == "qr_scan" && e.QrCode == "global");
+
+            var todayGlobalQrScans = await _context.AppEventLogs
+                .AsNoTracking()
+                .CountAsync(e => e.EventType == "qr_scan" && e.QrCode == "global" && e.CreatedAt >= today);
+
+            var appOpenByDate = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.EventType == "app_first_open" && e.CreatedAt.Date >= fromDate)
+                .GroupBy(e => e.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var activeByDate = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.CreatedAt.Date >= fromDate)
+                .GroupBy(e => e.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Select(x => x.DeviceId).Distinct().Count() })
+                .ToListAsync();
+
+            var globalScanByDate = await _context.AppEventLogs
+                .AsNoTracking()
+                .Where(e => e.EventType == "qr_scan" && e.QrCode == "global" && e.CreatedAt.Date >= fromDate)
+                .GroupBy(e => e.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var usageTrend = Enumerable.Range(0, 7)
+                .Select(offset => fromDate.AddDays(offset))
+                .Select(day => new AppUsageTrendItemDto
+                {
+                    Date = day,
+                    Installs = appOpenByDate.FirstOrDefault(x => x.Date == day)?.Count ?? 0,
+                    ActiveDevices = activeByDate.FirstOrDefault(x => x.Date == day)?.Count ?? 0,
+                    GlobalQrScans = globalScanByDate.FirstOrDefault(x => x.Date == day)?.Count ?? 0
+                })
+                .ToList();
+
+            return Ok(new AppUsageDto
+            {
+                TotalInstalls = totalInstalls,
+                TodayActiveDevices = todayActiveDevices,
+                TotalGlobalQrUsers = totalGlobalQrUsers,
+                TodayGlobalQrUsers = todayGlobalQrUsers,
+                TotalGlobalQrScans = totalGlobalQrScans,
+                TodayGlobalQrScans = todayGlobalQrScans,
+                UsageTrend = usageTrend
+            });
         }
 
         [HttpGet("owner-dashboard")]
@@ -169,6 +258,7 @@ namespace VinhKhanhApi.Controllers
             public int TotalMenus { get; set; }
             public int TotalVisits { get; set; }
             public int PendingSubmissions { get; set; }
+            public int PendingOwners { get; set; }
             public int LocalizedPois { get; set; }
             public int PoisWithoutMenus { get; set; }
             public int PoisWithoutThumbnail { get; set; }
@@ -203,6 +293,25 @@ namespace VinhKhanhApi.Controllers
             public int TotalPois { get; set; }
             public int ActiveMenus { get; set; }
             public int TodayVisits { get; set; }
+        }
+
+        public class AppUsageDto
+        {
+            public int TotalInstalls { get; set; }
+            public int TodayActiveDevices { get; set; }
+            public int TotalGlobalQrUsers { get; set; }
+            public int TodayGlobalQrUsers { get; set; }
+            public int TotalGlobalQrScans { get; set; }
+            public int TodayGlobalQrScans { get; set; }
+            public List<AppUsageTrendItemDto> UsageTrend { get; set; } = new();
+        }
+
+        public class AppUsageTrendItemDto
+        {
+            public DateTime Date { get; set; }
+            public int Installs { get; set; }
+            public int ActiveDevices { get; set; }
+            public int GlobalQrScans { get; set; }
         }
 
     }

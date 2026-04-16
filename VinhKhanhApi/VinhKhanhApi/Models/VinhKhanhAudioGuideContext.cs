@@ -19,6 +19,8 @@ public partial class VinhKhanhAudioGuideContext : DbContext
 
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
+    public virtual DbSet<AppEventLog> AppEventLogs { get; set; }
+
     public virtual DbSet<Menu> Menus { get; set; }
 
     public virtual DbSet<Poi> Pois { get; set; }
@@ -81,6 +83,29 @@ public partial class VinhKhanhAudioGuideContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.AuditLogs)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK__AuditLogs__UserI__4CA06362");
+        });
+
+        modelBuilder.Entity<AppEventLog>(entity =>
+        {
+            entity.HasKey(e => e.EventId).HasName("PK__AppEventLog__EventID");
+
+            entity.ToTable("AppEventLog");
+
+            entity.Property(e => e.EventId).HasColumnName("EventID");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.DeviceId)
+                .HasMaxLength(255)
+                .IsUnicode(false)
+                .HasColumnName("DeviceID");
+            entity.Property(e => e.EventType)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.QrCode)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.Poiid).HasColumnName("POIID");
         });
 
         modelBuilder.Entity<Menu>(entity =>

@@ -42,6 +42,28 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 var app = builder.Build();
 
+// Tạo bảng AppEventLog nếu DB chưa có (không cần migrations)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<VinhKhanhAudioGuideContext>();
+    await db.Database.ExecuteSqlRawAsync(@"
+IF OBJECT_ID(N'[dbo].[AppEventLog]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[AppEventLog](
+        [EventID] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [DeviceID] VARCHAR(255) NOT NULL,
+        [EventType] VARCHAR(50) NOT NULL,
+        [QrCode] VARCHAR(100) NULL,
+        [POIID] INT NULL,
+        [CreatedAt] DATETIME NOT NULL CONSTRAINT [DF_AppEventLog_CreatedAt] DEFAULT (GETDATE())
+    );
+
+    CREATE INDEX [IX_AppEventLog_DeviceID_CreatedAt] ON [dbo].[AppEventLog]([DeviceID], [CreatedAt]);
+    CREATE INDEX [IX_AppEventLog_EventType_CreatedAt] ON [dbo].[AppEventLog]([EventType], [CreatedAt]);
+END
+");
+}
+
 // 4. Cấu hình HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

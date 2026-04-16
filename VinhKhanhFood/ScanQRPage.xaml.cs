@@ -226,6 +226,16 @@ public partial class ScanQRPage : ContentPage
                     }
                 }
 
+                if (IsGlobalQr(rawValue))
+                {
+                    lblScanStatus.Text = "Đã quét QR tổng. Đang mở danh sách quán...";
+                    Preferences.Default.Set("HasUnlockedPoiList", true);
+                    _ = _apiService.LogAppEventAsync("qr_scan", "global");
+                    await Shell.Current.GoToAsync("//main");
+                    RestartScanner("Đã mở danh sách quán (QR tổng)");
+                    return;
+                }
+
                 var poiId = ExtractPoiId(rawValue);
                 Poi? targetPoi = null;
                 Exception? poiApiLookupException = null;
@@ -409,6 +419,34 @@ public partial class ScanQRPage : ContentPage
         }
 
         return null;
+    }
+
+    private static bool IsGlobalQr(string rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return false;
+        }
+
+        if (string.Equals(rawValue.Trim(), "global", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (rawValue.Contains("qr=global", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (Uri.TryCreate(rawValue.Trim(), UriKind.Absolute, out var uri))
+        {
+            if (uri.Query.Contains("qr=global", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

@@ -65,12 +65,153 @@
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body">
                             <div class="text-muted small">Yêu cầu chờ duyệt</div>
-                            <div class="fs-3 fw-bold text-warning">@dashboard.PendingSubmissions</div>
+                            <div class="fs-3 fw-bold text-warning">@((dashboard.PendingSubmissions + dashboard.PendingOwners + dashboard.PendingPois).ToString("N0"))</div>
+                            <div class="small text-muted">Owner: @dashboard.PendingOwners • Quán: @dashboard.PendingPois • Y/c khác: @dashboard.PendingSubmissions</div>
                            @*  <div class="small text-muted">Từ bảng PoiSubmission</div> *@
                         </div>
                     </div>
                 </div>
             </div>
+
+            @if (appUsage is not null)
+            {
+                <div class="card border-0 shadow-sm rounded-4 mb-3 monitoring-panel">
+                    <div class="card-header bg-white border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-primary"><i class="bi bi-activity me-2"></i>Monitoring người dùng app</h5>
+                        <span class="badge rounded-pill text-bg-light border">Near real-time</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-xl-2 col-lg-4 col-md-6">
+                                <div class="monitoring-card accent-primary">
+                                    <div class="monitoring-label">Thiết bị cài lần đầu</div>
+                                    <div class="monitoring-value">@appUsage.TotalInstalls.ToString("N0")</div>
+                                    <div class="monitoring-note">Unique `app_first_open`</div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-lg-4 col-md-6">
+                                <div class="monitoring-card accent-success">
+                                    <div class="monitoring-label">Thiết bị active hôm nay</div>
+                                    <div class="monitoring-value">@appUsage.TodayActiveDevices.ToString("N0")</div>
+                                    <div class="monitoring-note">Unique events today</div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-lg-4 col-md-6">
+                                <div class="monitoring-card accent-info">
+                                    <div class="monitoring-label">Đã quét QR tổng</div>
+                                    <div class="monitoring-value">@appUsage.TotalGlobalQrUsers.ToString("N0")</div>
+                                    <div class="monitoring-note">Unique deviceId</div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-lg-4 col-md-6">
+                                <div class="monitoring-card accent-warning">
+                                    <div class="monitoring-label">QR tổng hôm nay</div>
+                                    <div class="monitoring-value">@appUsage.TodayGlobalQrUsers.ToString("N0")</div>
+                                    <div class="monitoring-note">Unique deviceId</div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-lg-4 col-md-6">
+                                <div class="monitoring-card accent-purple">
+                                    <div class="monitoring-label">Tổng lượt quét QR tổng</div>
+                                    <div class="monitoring-value">@appUsage.TotalGlobalQrScans.ToString("N0")</div>
+                                    <div class="monitoring-note">Count all scans</div>
+                                </div>
+                            </div>
+                            <div class="col-xl-2 col-lg-4 col-md-6">
+                                <div class="monitoring-card accent-dark">
+                                    <div class="monitoring-label">Lượt quét hôm nay</div>
+                                    <div class="monitoring-value">@appUsage.TodayGlobalQrScans.ToString("N0")</div>
+                                    <div class="monitoring-note">Count today</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-8">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-header bg-white border-0 pt-3 px-3">
+                                <h5 class="mb-0 text-primary">Xu hướng usage 7 ngày</h5>
+                            </div>
+                            <div class="card-body px-3">
+                                @if (appUsage.UsageTrend.Count == 0)
+                                {
+                                    <div class="text-muted">Chưa có dữ liệu usage trend.</div>
+                                }
+                                else
+                                {
+                                    var chartWidth = 760;
+                                    var chartHeight = 260;
+                                    var chartPadding = 26;
+                                    var chartTopPadding = 18;
+                                    var chartBottomPadding = 34;
+                                    var maxTrend = Math.Max(1, appUsage.UsageTrend.Max(x => Math.Max(x.ActiveDevices, Math.Max(x.Installs, x.GlobalQrScans))));
+                                    var installPoints = BuildLinePoints(appUsage.UsageTrend, x => x.Installs, chartWidth, chartHeight, chartPadding, chartTopPadding, chartBottomPadding);
+                                    var activePoints = BuildLinePoints(appUsage.UsageTrend, x => x.ActiveDevices, chartWidth, chartHeight, chartPadding, chartTopPadding, chartBottomPadding);
+                                    var qrPoints = BuildLinePoints(appUsage.UsageTrend, x => x.GlobalQrScans, chartWidth, chartHeight, chartPadding, chartTopPadding, chartBottomPadding);
+                                    var yTop = chartTopPadding;
+                                    var yMid = (chartTopPadding + (chartHeight - chartBottomPadding)) / 2.0;
+                                    var yBottom = chartHeight - chartBottomPadding;
+
+                                    <div class="d-flex flex-wrap gap-3 small mb-2 chart-legend">
+                                        <span><i class="bi bi-circle-fill text-primary me-1"></i>Install</span>
+                                        <span><i class="bi bi-circle-fill text-success me-1"></i>Active</span>
+                                        <span><i class="bi bi-circle-fill text-warning me-1"></i>QR scans</span>
+                                    </div>
+
+                                    <div class="usage-chart-wrap">
+                                        <svg viewBox="0 0 @chartWidth @chartHeight" class="usage-svg">
+                                            <line x1="@chartPadding" y1="@yTop" x2="@(chartWidth - chartPadding)" y2="@yTop" class="chart-grid" />
+                                            <line x1="@chartPadding" y1="@yMid" x2="@(chartWidth - chartPadding)" y2="@yMid" class="chart-grid" />
+                                            <line x1="@chartPadding" y1="@yBottom" x2="@(chartWidth - chartPadding)" y2="@yBottom" class="chart-grid" />
+
+                                            <polyline points="@installPoints" class="chart-line line-install" />
+                                            <polyline points="@activePoints" class="chart-line line-active" />
+                                            <polyline points="@qrPoints" class="chart-line line-qr" />
+
+                                            @for (var i = 0; i < appUsage.UsageTrend.Count; i++)
+                                            {
+                                                var item = appUsage.UsageTrend[i];
+                                                var x = GetXForIndex(i, appUsage.UsageTrend.Count, chartWidth, chartPadding);
+                                                var installY = GetYForValue(item.Installs, maxTrend, chartHeight, chartTopPadding, chartBottomPadding);
+                                                var activeY = GetYForValue(item.ActiveDevices, maxTrend, chartHeight, chartTopPadding, chartBottomPadding);
+                                                var qrY = GetYForValue(item.GlobalQrScans, maxTrend, chartHeight, chartTopPadding, chartBottomPadding);
+                                                <circle cx="@x" cy="@installY" r="3.3" class="dot-install" />
+                                                <circle cx="@x" cy="@activeY" r="3.3" class="dot-active" />
+                                                <circle cx="@x" cy="@qrY" r="3.3" class="dot-qr" />
+                                                <svg:text x="@x" y="@(chartHeight - 8)" text-anchor="middle" class="chart-x-label">@item.Date.ToString("dd/MM")</svg:text>
+                                            }
+                                        </svg>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-header bg-white border-0 pt-3 px-3">
+                                <h5 class="mb-0 text-primary">Gợi ý theo dõi</h5>
+                            </div>
+                            <div class="card-body px-3">
+                                <div class="small text-muted mb-3">Tách rõ "user thiết bị" và "lượt tương tác" để đánh giá đúng hiệu quả.</div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <span class="small">User/Install ratio</span>
+                                    <span class="fw-semibold">@GetInstallToQrUserRatio(appUsage)%</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <span class="small">QR repeat ratio</span>
+                                    <span class="fw-semibold">@GetQrRepeatRatio(appUsage)%</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2">
+                                    <span class="small">Nhịp active hôm nay</span>
+                                    <span class="fw-semibold">@GetActiveRate(appUsage)%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <div class="row g-3 mb-3">
                 <div class="col-lg-8">
@@ -231,8 +372,91 @@
     </NotAuthorized>
 </AuthorizeView>
 
+<style>
+    .monitoring-panel {
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    }
+
+    .monitoring-card {
+        border: 1px solid #eef1f7;
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+        height: 100%;
+    }
+
+    .monitoring-label {
+        font-size: 0.78rem;
+        color: #6c757d;
+    }
+
+    .monitoring-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-top: 3px;
+    }
+
+    .monitoring-note {
+        font-size: 0.74rem;
+        color: #9096a0;
+        margin-top: 2px;
+    }
+
+    .accent-primary .monitoring-value { color: #0d6efd; }
+    .accent-success .monitoring-value { color: #198754; }
+    .accent-info .monitoring-value { color: #0dcaf0; }
+    .accent-warning .monitoring-value { color: #f39c12; }
+    .accent-purple .monitoring-value { color: #6f42c1; }
+    .accent-dark .monitoring-value { color: #212529; }
+
+    .chart-legend {
+        color: #5f6b78;
+    }
+
+    .usage-chart-wrap {
+        width: 100%;
+        border: 1px solid #eef1f5;
+        border-radius: 12px;
+        padding: 10px 10px 4px 10px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    }
+
+    .usage-svg {
+        width: 100%;
+        height: 270px;
+        display: block;
+    }
+
+    .chart-grid {
+        stroke: #e8edf4;
+        stroke-width: 1;
+    }
+
+    .chart-line {
+        fill: none;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .line-install { stroke: #0d6efd; }
+    .line-active { stroke: #198754; }
+    .line-qr { stroke: #f39c12; }
+
+    .dot-install { fill: #0d6efd; }
+    .dot-active { fill: #198754; }
+    .dot-qr { fill: #f39c12; }
+
+    .chart-x-label {
+        font-size: 11px;
+        fill: #75808d;
+    }
+</style>
+
 @code {
     private AnalyticsDashboard? dashboard;
+    private AppUsage? appUsage;
     private bool isLoading = true;
     private string errorMessage = string.Empty;
 
@@ -248,6 +472,7 @@
             isLoading = true;
             errorMessage = string.Empty;
             dashboard = await Http.GetFromJsonAsync<AnalyticsDashboard>("api/analytics/dashboard");
+            appUsage = await Http.GetFromJsonAsync<AppUsage>("api/analytics/usage");
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
@@ -274,6 +499,7 @@
         public int TotalMenus { get; set; }
         public int TotalVisits { get; set; }
         public int PendingSubmissions { get; set; }
+        public int PendingOwners { get; set; }
         public int LocalizedPois { get; set; }
         public int PoisWithoutMenus { get; set; }
         public int PoisWithoutThumbnail { get; set; }
@@ -303,4 +529,89 @@
         public bool HasThumbnail { get; set; }
     }
 
+    public class AppUsage
+    {
+        public int TotalInstalls { get; set; }
+        public int TodayActiveDevices { get; set; }
+        public int TotalGlobalQrUsers { get; set; }
+        public int TodayGlobalQrUsers { get; set; }
+        public int TotalGlobalQrScans { get; set; }
+        public int TodayGlobalQrScans { get; set; }
+        public List<AppUsageTrendItem> UsageTrend { get; set; } = new();
+    }
+
+    public class AppUsageTrendItem
+    {
+        public DateTime Date { get; set; }
+        public int Installs { get; set; }
+        public int ActiveDevices { get; set; }
+        public int GlobalQrScans { get; set; }
+    }
+
+    private static string BuildLinePoints(List<AppUsageTrendItem> items, Func<AppUsageTrendItem, int> selector, int width, int height, int padding, int topPadding, int bottomPadding)
+    {
+        if (items.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var max = Math.Max(1, items.Max(selector));
+        var points = new List<string>(items.Count);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var x = GetXForIndex(i, items.Count, width, padding);
+            var y = GetYForValue(selector(items[i]), max, height, topPadding, bottomPadding);
+            points.Add($"{x:0.##},{y:0.##}");
+        }
+
+        return string.Join(" ", points);
+    }
+
+    private static double GetXForIndex(int index, int count, int width, int padding)
+    {
+        if (count <= 1)
+        {
+            return width / 2.0;
+        }
+
+        var plotWidth = width - (padding * 2.0);
+        return padding + (plotWidth * index / (count - 1.0));
+    }
+
+    private static double GetYForValue(int value, int max, int height, int topPadding, int bottomPadding)
+    {
+        var plotHeight = height - topPadding - bottomPadding;
+        var ratio = max <= 0 ? 0 : value / (double)max;
+        return topPadding + ((1 - ratio) * plotHeight);
+    }
+
+    private static int GetInstallToQrUserRatio(AppUsage usage)
+    {
+        if (usage.TotalInstalls <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round(usage.TotalGlobalQrUsers * 100.0 / usage.TotalInstalls);
+    }
+
+    private static int GetQrRepeatRatio(AppUsage usage)
+    {
+        if (usage.TotalGlobalQrUsers <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round((usage.TotalGlobalQrScans - usage.TotalGlobalQrUsers) * 100.0 / usage.TotalGlobalQrUsers);
+    }
+
+    private static int GetActiveRate(AppUsage usage)
+    {
+        if (usage.TotalInstalls <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round(usage.TodayActiveDevices * 100.0 / usage.TotalInstalls);
+    }
 }

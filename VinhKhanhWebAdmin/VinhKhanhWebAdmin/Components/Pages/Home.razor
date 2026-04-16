@@ -293,7 +293,7 @@
                 TotalPois = analytics.TotalPois,
                 ActivePois = analytics.ActivePois,
                 PendingPois = analytics.PendingPois,
-                PendingSubmissions = analytics.PendingSubmissions,
+                PendingSubmissions = analytics.PendingSubmissions + analytics.PendingOwners + analytics.PendingPois,
                 TotalVisits = analytics.TotalVisits,
                 TodayVisits = analytics.VisitsTrend?.FirstOrDefault(x => x.Date.Date == DateTime.Today)?.TotalVisits ?? 0,
                 TotalUsers = users.Summary.TotalUsers,
@@ -432,6 +432,7 @@
         public int ActivePois { get; set; }
         public int PendingPois { get; set; }
         public int PendingSubmissions { get; set; }
+        public int PendingOwners { get; set; }
         public int TotalVisits { get; set; }
         public List<VisitsTrendItem> VisitsTrend { get; set; } = new();
     }

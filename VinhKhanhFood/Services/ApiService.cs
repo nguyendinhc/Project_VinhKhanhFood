@@ -14,7 +14,7 @@ namespace VinhKhanhFood.Services
         // QUAN TRỌNG: Thay IP của máy tính bạn vào đây (Ví dụ: 192.168.1.5)
         // Số 7044 là Port của Web API (xem lại trên trình duyệt khi chạy API)
 
-        private const string BaseApiUrl = "http://192.168.100.106:5100/api/";
+        private const string BaseApiUrl = "http://10.10.20.251:5100/api/";
 
         private static readonly string BaseFileUrl = BaseApiUrl.EndsWith("api/", StringComparison.OrdinalIgnoreCase)
             ? BaseApiUrl[..^4]
@@ -102,6 +102,52 @@ namespace VinhKhanhFood.Services
                 var error = await response.Content.ReadAsStringAsync();
                 throw new HttpRequestException($"API lỗi {(int)response.StatusCode}: {error}");
             }
+        }
+
+        public async Task EnsureFirstOpenLoggedAsync()
+        {
+            const string key = "HasLoggedAppFirstOpen";
+            if (Preferences.Default.Get(key, false))
+            {
+                return;
+            }
+
+            try
+            {
+                await LogAppEventAsync("app_first_open");
+            }
+            catch
+            {
+                // best-effort: không chặn trải nghiệm app
+            }
+            finally
+            {
+                // Ghi lại để chỉ tính 1 lần / 1 thiết bị
+                Preferences.Default.Set(key, true);
+            }
+        }
+
+        public async Task LogAppEventAsync(string eventType, string? qrCode = null, int? poiId = null)
+        {
+            if (string.IsNullOrWhiteSpace(eventType))
+            {
+                return;
+            }
+
+            var payload = new
+            {
+                DeviceId = GetOrCreateTrackingDeviceId(),
+                EventType = eventType.Trim(),
+                QrCode = string.IsNullOrWhiteSpace(qrCode) ? null : qrCode.Trim(),
+                Poiid = poiId
+            };
+
+            var json = JsonConvert.SerializeObject(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(BaseApiUrl + "events", content);
+
+            // Không throw để tránh làm hỏng luồng chính
+            response.Dispose();
         }
 
         public async Task RegisterOwnerRequestAsync(string username, string password, string? fullName, string? email)

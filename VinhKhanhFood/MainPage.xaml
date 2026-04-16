@@ -25,7 +25,8 @@
                        BackgroundColor="Transparent" />
         </Border>
 
-        <Border AbsoluteLayout.LayoutBounds="0.5,1,1,0.50"
+        <Border x:Name="poiListPanel"
+                AbsoluteLayout.LayoutBounds="0.5,1,1,0.50"
                 AbsoluteLayout.LayoutFlags="All"
                 Padding="16,14,16,8"
                 BackgroundColor="#FFF8F1"
@@ -78,6 +79,29 @@
                     </CollectionView.ItemTemplate>
                 </CollectionView>
             </Grid>
+        </Border>
+
+        <Border x:Name="globalQrOverlay"
+                AbsoluteLayout.LayoutBounds="0.5,0.78,0.88,-1"
+                AbsoluteLayout.LayoutFlags="PositionProportional,WidthProportional"
+                BackgroundColor="#CC1A1A1A"
+                Padding="16,14"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 16"
+                IsVisible="False">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Quét QR để hiện thông tin tất cả quán"
+                       TextColor="White"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center" />
+                <Button Text="Mở quét QR"
+                        Clicked="OnScanGlobalQrClicked"
+                        BackgroundColor="#FF5722"
+                        TextColor="White"
+                        CornerRadius="14"
+                        HeightRequest="44" />
+            </VerticalStackLayout>
         </Border>
     </AbsoluteLayout>
 </ContentPage>
